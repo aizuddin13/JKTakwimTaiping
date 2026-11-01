@@ -304,6 +304,7 @@ function render() {
   <header class="atas">
     <div class="jenama"><span class="logo kecil">JK</span><div><strong>JK Takwim</strong><span class="sub">${esc(MAKLUMAT_SEKOLAH.nama)}</span></div></div>
     <div class="pengguna"><span>${esc(S.saya.nama)}</span><span class="lencana">${admin ? "Admin" : "Guru"}</span>
+      <button id="b-kata" class="sekunder kecil">Tukar kata laluan</button>
       <button id="b-keluar" class="sekunder kecil">Log keluar</button></div>
   </header>
   <nav class="tabs">${tabs
@@ -312,6 +313,7 @@ function render() {
   <main id="isi"></main>`;
 
   $("#b-keluar").onclick = () => sb.auth.signOut();
+  $("#b-kata").onclick = bukaTukarKataLaluan;
   app.querySelectorAll("[data-tab]").forEach((b) => {
     b.onclick = () => {
       S.tab = b.dataset.tab;
@@ -327,6 +329,75 @@ function render() {
     pemberat: viewPemberat,
     surat: viewSurat,
   })[S.tab]();
+}
+
+// ---------- Tukar kata laluan ----------
+
+function bukaTukarKataLaluan() {
+  const lapik = document.createElement("div");
+  lapik.className = "lapik";
+  lapik.innerHTML = `
+  <div class="kad modal" role="dialog" aria-modal="true" aria-labelledby="tajuk-kata">
+    <h3 id="tajuk-kata">Tukar kata laluan</h3>
+    <p class="nota">Akaun: ${esc(S.session.user.email)}</p>
+    <form id="f-kata">
+      <label>Kata laluan semasa<input type="password" name="semasa" required autocomplete="current-password"></label>
+      <label>Kata laluan baru<input type="password" name="baru" required minlength="8" autocomplete="new-password"></label>
+      <label>Sahkan kata laluan baru<input type="password" name="sahkan" required minlength="8" autocomplete="new-password"></label>
+      <p class="nota">Minimum 8 aksara. Gunakan gabungan huruf, nombor dan simbol.</p>
+      <p class="mesej" id="mesej-kata"></p>
+      <div class="baris-butang">
+        <button type="button" class="sekunder" id="b-batal-kata">Batal</button>
+        <button type="submit" class="utama">Simpan</button>
+      </div>
+    </form>
+  </div>`;
+  document.body.appendChild(lapik);
+
+  const form = $("#f-kata", lapik);
+  const tutup = () => {
+    lapik.remove();
+    document.removeEventListener("keydown", kekunci);
+  };
+  const kekunci = (e) => e.key === "Escape" && tutup();
+  document.addEventListener("keydown", kekunci);
+  lapik.addEventListener("mousedown", (e) => e.target === lapik && tutup());
+  $("#b-batal-kata", lapik).onclick = tutup;
+  form.semasa.focus();
+
+  const tetapMesej = (t, j = "ralat") => {
+    const m = $("#mesej-kata", lapik);
+    m.textContent = t;
+    m.className = `mesej ${j}`;
+  };
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const semasa = form.semasa.value;
+    const baru = form.baru.value;
+    if (baru !== form.sahkan.value) return tetapMesej("Kata laluan baru dan pengesahan tidak sama.");
+    if (baru.length < 8) return tetapMesej("Kata laluan baru mesti sekurang-kurangnya 8 aksara.");
+    if (baru === semasa) return tetapMesej("Kata laluan baru mesti berbeza daripada kata laluan semasa.");
+
+    const butang = form.querySelector("button[type=submit]");
+    butang.disabled = true;
+    try {
+      const sah = await sb.auth.signInWithPassword({ email: S.session.user.email, password: semasa });
+      if (sah.error) return tetapMesej("Kata laluan semasa salah.");
+      const { error } = await sb.auth.updateUser({ password: baru });
+      if (error) {
+        if (/different from the old/i.test(error.message)) return tetapMesej("Kata laluan baru mesti berbeza daripada kata laluan lama.");
+        if (/weak|pwned|leaked|compromised/i.test(error.message)) return tetapMesej("Kata laluan ini terlalu lemah atau pernah bocor. Pilih kata laluan lain.");
+        return tetapMesej(error.message);
+      }
+      tutup();
+      toast("Kata laluan berjaya ditukar.");
+    } catch (err) {
+      tetapMesej(mesejRalat(err));
+    } finally {
+      butang.disabled = false;
+    }
+  };
 }
 
 const stat = (label, nilai) => `<div class="stat"><span>${label}</span><strong>${nilai}</strong></div>`;
