@@ -33,6 +33,8 @@ const S = {
   guruUnit: "",
   bebanKumpulan: "",
   bebanGred: "",
+  bebanCari: "",
+  bebanUmur: "",
   guruTapis: { gred: "", jawatan: "", peranan: "", jk: "", umur: "" },
   jkEdit: null,
   surat: {
@@ -428,8 +430,15 @@ function viewBeban() {
   const senaraiGred = [...new Set(ikutKumpulan.map((g) => g.gred).filter(Boolean))]
     .sort((a, b) => String(a).localeCompare(String(b), "ms", { numeric: true }));
   if (S.bebanGred && !senaraiGred.includes(S.bebanGred)) S.bebanGred = "";
-  const senarai = ikutKumpulan.filter((g) => !S.bebanGred || g.gred === S.bebanGred)
-    .sort((a, b) => b.beban - a.beban);
+  const cari = (S.bebanCari || "").trim().toLowerCase();
+  const julatUmur = { "<30": [0, 29], "30-39": [30, 39], "40-49": [40, 49], "50+": [50, 999] };
+  const senarai = ikutKumpulan.filter((g) => {
+    const j = julatUmur[S.bebanUmur];
+    return (!S.bebanGred || g.gred === S.bebanGred) &&
+      (!cari || String(g.nama || "").toLowerCase().includes(cari)) &&
+      (!j || (typeof g.umur === "number" && g.umur >= j[0] && g.umur <= j[1]));
+  }).sort((a, b) => b.beban - a.beban);
+  const adaTapis = !!(S.bebanCari || S.bebanGred || S.bebanUmur);
   const bilDG = S.guruLengkap.filter(isGuruDG).length;
   const kumpulan = [["", "Semua", S.guruLengkap.length], ["guru", "Guru (DG)", bilDG],
     ["sokongan", "Kakitangan sokongan", S.guruLengkap.length - bilDG]];
@@ -442,15 +451,17 @@ function viewBeban() {
 
   isi.innerHTML = `
   <div class="bar-alat">
-    <label class="semak"><input type="checkbox" id="c-kecuali" ${S.kecualiPengurusan ? "checked" : ""}>
-      Kecualikan jawatan pengurusan (Penasihat, Pengerusi, Timbalan Pengerusi)</label>
-  </div>
-  <div class="bar-alat">
     <div class="segmen">${kumpulan
       .map(([v, t, n]) => `<button type="button" data-kumpulan="${v}" class="${S.bebanKumpulan === v ? "aktif" : ""}">${t} <small>${n}</small></button>`)
       .join("")}</div>
-    <select id="s-beban-gred" class="${S.bebanGred ? "aktif" : ""}"><option value="">Semua gred</option>${senaraiGred
-      .map((v) => `<option value="${esc(v)}" ${S.bebanGred === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+    <div class="penapis">
+      <input id="i-beban-cari" type="search" placeholder="Cari nama…" value="${esc(S.bebanCari || "")}">
+      <select id="s-beban-gred" class="${S.bebanGred ? "aktif" : ""}"><option value="">Semua gred</option>${senaraiGred
+        .map((v) => `<option value="${esc(v)}" ${S.bebanGred === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+      <select id="s-beban-umur" class="${S.bebanUmur ? "aktif" : ""}"><option value="">Semua umur</option>${[["<30", "Bawah 30 thn"], ["30-39", "30–39 thn"], ["40-49", "40–49 thn"], ["50+", "50 thn ke atas"]]
+        .map(([v, t]) => `<option value="${v}" ${S.bebanUmur === v ? "selected" : ""}>${t}</option>`).join("")}</select>
+      ${adaTapis ? '<button type="button" class="sekunder kecil" id="b-beban-reset">Set semula</button>' : ""}
+    </div>
   </div>
   <div class="statistik">
     ${stat(labelBil, senarai.length)}${stat("Purata beban", nf(purata))}${stat("Tertinggi", nf(maks))}${stat("Terendah", nf(min))}${stat("Jurang", nf(maks - min))}
@@ -484,9 +495,24 @@ function viewBeban() {
     viewBeban();
   };
 
-  $("#c-kecuali").onchange = (e) => {
-    S.kecualiPengurusan = e.target.checked;
-    kiraSemula();
+  const iCari = $("#i-beban-cari");
+  iCari.oninput = () => {
+    S.bebanCari = iCari.value;
+    const pos = iCari.selectionStart;
+    viewBeban();
+    const baru = $("#i-beban-cari");
+    baru.focus();
+    baru.setSelectionRange(pos, pos);
+  };
+  $("#s-beban-umur").onchange = (e) => {
+    S.bebanUmur = e.target.value;
+    viewBeban();
+  };
+  const bReset = $("#b-beban-reset");
+  if (bReset) bReset.onclick = () => {
+    S.bebanCari = "";
+    S.bebanGred = "";
+    S.bebanUmur = "";
     viewBeban();
   };
 }
