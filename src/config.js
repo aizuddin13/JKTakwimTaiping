@@ -10,3 +10,12 @@ export const MAKLUMAT_SEKOLAH = {
   sesi: "2027",
   penandatangan: "Pengetua",
 };
+
+// Pengurusan tertinggi — catatan dipaparkan di bawah nama (padanan nama, tak sensitif huruf besar/kecil).
+export const PENGURUSAN_TERTINGGI = {
+  "ARIFAH ILYANA BINTI ABDUL RAHMAN": "Pengetua",
+  "AHMAD SYUKRI BIN AHMAD HARIRI": "Timbalan Pengetua Kecemerlangan Akademik",
+  "ROZAIDI BIN ISHAK": "Timbalan Pengetua Pembangunan Pelajar",
+  "MOHAMAD KHAIRUL AIZUDDIN BIN KHASIM": "Timbalan Pengetua Pembangunan Bakat",
+  "SITI AMINAH BINTI ABDULLAH": "Penolong Pegawai Tadbir Kanan",
+};

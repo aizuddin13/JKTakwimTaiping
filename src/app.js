@@ -3,7 +3,7 @@
 // Keselamatan data dikawal oleh RLS di Supabase: guru biasa hanya menerima data sendiri.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SUPABASE_URL, SUPABASE_KEY, MAKLUMAT_SEKOLAH } from "./config.js";
+import { SUPABASE_URL, SUPABASE_KEY, MAKLUMAT_SEKOLAH, PENGURUSAN_TERTINGGI } from "./config.js";
 import { muatConfig } from "./supabaseData.js";
 import { kiraBebanGuru, kiraPemberat, binaIndeks } from "./pengiraanBeban.js";
 import { agihSeimbang, semakKesesuaian } from "./penyeimbang.js";
@@ -62,6 +62,13 @@ const kosongJadiNull = (v) => {
   return t === "" ? null : t;
 };
 const topengKP = (kp) => (kp ? String(kp).replace(/\d(?=\d{4})/g, "*") : "-");
+const normNama = (n) => String(n || "").toUpperCase().replace(/\s+/g, " ").trim();
+const PENGURUSAN_MAP = new Map(Object.entries(PENGURUSAN_TERTINGGI || {}).map(([n, j]) => [normNama(n), j]));
+const catatanPengurusan = (g) => PENGURUSAN_MAP.get(normNama(g?.nama)) || "";
+const tagPengurusan = (g) => {
+  const c = catatanPengurusan(g);
+  return c ? `<span class="tag pengurusan">${esc(c)}</span>` : "";
+};
 
 function kodSort(a = "", b = "") {
   const pa = /^([A-Za-z]+)(\d+)/.exec(a || "") || [null, a || "", "0"];
@@ -476,7 +483,7 @@ function viewBeban() {
       <tbody>${senarai
         .map((g) => {
           const kelas = g.beban > purata * 1.25 ? "tinggi" : g.beban < purata * 0.75 ? "rendah" : "";
-          return `<tr><td>${esc(g.nama)}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
+          return `<tr><td>${esc(g.nama)}${catatanPengurusan(g) ? `<span class="sub">${tagPengurusan(g)}</span>` : ""}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
           <td class="n"><strong>${nf(g.beban)}</strong></td>
           <td><div class="palang"><span class="${kelas}" style="width:${maks ? (g.beban / maks) * 100 : 0}%"></span></div></td></tr>`;
         })
@@ -553,7 +560,7 @@ function viewLantikan() {
     .map((g) => {
       const sekat = jk.fizikal && typeof g.umur === "number" && g.umur >= had;
       const sudah = idAhli.has(g.id);
-      return `<option value="${g.id}">${esc(g.nama)}${g.gred ? ` · ${esc(g.gred)}` : ""} · beban ${nf(g.beban)}${g.umur ? ` · ${g.umur} thn` : ""}${
+      return `<option value="${g.id}">${esc(g.nama)}${catatanPengurusan(g) ? ` (${esc(catatanPengurusan(g))})` : ""}${g.gred ? ` · ${esc(g.gred)}` : ""} · beban ${nf(g.beban)}${g.umur ? ` · ${g.umur} thn` : ""}${
         sudah ? " · sudah dalam JK ini" : ""}${sekat ? " · ⚠ melebihi had umur fizikal" : ""}</option>`;
     })
     .join("")}`;
@@ -722,7 +729,7 @@ function viewGuru() {
         <thead><tr><th>Nama</th><th>Jawatan</th><th>Gred</th><th>No. Gaji</th><th>No. K/P</th><th>Umur</th><th>Peranan</th><th class="n">JK</th><th></th></tr></thead>
         <tbody>${senarai
           .map((g) => `<tr>
-            <td>${esc(g.nama)}<span class="sub">${esc(g.unit || "")}</span></td>
+            <td>${esc(g.nama)}<span class="sub">${tagPengurusan(g)}${catatanPengurusan(g) && g.unit ? " " : ""}${esc(g.unit || "")}</span></td>
             <td>${esc(g.jawatan_hakiki || "-")}</td>
             <td class="nowrap">${esc(g.gred || "-")}</td>
             <td>${esc(g.no_gaji || "-")}</td>
