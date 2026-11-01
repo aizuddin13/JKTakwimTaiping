@@ -59,10 +59,13 @@ create table if not exists tetapan (
   nilai jsonb not null
 );
 
--- ---------- 2. Fungsi bantu ----------
+-- ---------- 2. Fungsi bantu (schema private — tidak terdedah ke API) ----------
+
+create schema if not exists private;
+grant usage on schema private to authenticated;
 
 -- Adakah pengguna semasa seorang admin?
-create or replace function is_admin()
+create or replace function private.is_admin()
 returns boolean
 language sql stable security definer
 set search_path = public
@@ -74,13 +77,18 @@ as $$
 $$;
 
 -- id guru bagi pengguna semasa
-create or replace function guru_saya()
+create or replace function private.guru_saya()
 returns bigint
 language sql stable security definer
 set search_path = public
 as $$
   select g.id from guru g where g.auth_id = auth.uid() limit 1;
 $$;
+
+revoke execute on function private.is_admin() from public;
+revoke execute on function private.guru_saya() from public;
+grant execute on function private.is_admin() to authenticated;
+grant execute on function private.guru_saya() to authenticated;
 
 -- ---------- 3. Aktifkan RLS ----------
 
@@ -92,25 +100,25 @@ alter table tetapan      enable row level security;
 
 -- Rujukan (jawatan, jawatankuasa, tetapan): semua yang login boleh BACA; admin boleh UBAH.
 create policy baca_jawatan on jawatan for select to authenticated using (true);
-create policy urus_jawatan on jawatan for all to authenticated using (is_admin()) with check (is_admin());
+create policy urus_jawatan on jawatan for all to authenticated using (private.is_admin()) with check (private.is_admin());
 
 create policy baca_jk on jawatankuasa for select to authenticated using (true);
-create policy urus_jk on jawatankuasa for all to authenticated using (is_admin()) with check (is_admin());
+create policy urus_jk on jawatankuasa for all to authenticated using (private.is_admin()) with check (private.is_admin());
 
 create policy baca_tetapan on tetapan for select to authenticated using (true);
-create policy urus_tetapan on tetapan for all to authenticated using (is_admin()) with check (is_admin());
+create policy urus_tetapan on tetapan for all to authenticated using (private.is_admin()) with check (private.is_admin());
 
 -- Guru: nampak rekod SENDIRI sahaja; admin nampak semua. Tulis = admin sahaja.
 create policy baca_guru on guru for select to authenticated
-  using (auth_id = auth.uid() or is_admin());
+  using (auth_id = auth.uid() or private.is_admin());
 create policy urus_guru on guru for all to authenticated
-  using (is_admin()) with check (is_admin());
+  using (private.is_admin()) with check (private.is_admin());
 
 -- Lantikan: guru nampak lantikan SENDIRI; admin semua. Tulis = admin sahaja.
 create policy baca_lantikan on lantikan for select to authenticated
-  using (guru_id = guru_saya() or is_admin());
+  using (guru_id = private.guru_saya() or private.is_admin());
 create policy urus_lantikan on lantikan for all to authenticated
-  using (is_admin()) with check (is_admin());
+  using (private.is_admin()) with check (private.is_admin());
 
 -- ---------- 4. Seed tetapan + pemberat asas ----------
 
