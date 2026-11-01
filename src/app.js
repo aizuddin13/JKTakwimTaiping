@@ -523,6 +523,19 @@ function viewLantikan() {
     .join("");
 
   const guruSusun = [...S.guruLengkap].sort((a, b) => a.beban - b.beban);
+  const opsGuru = (senarai) => `<option value="">${senarai.length ? "Pilih guru…" : "Tiada padanan"}</option>${senarai
+    .map((g) => {
+      const sekat = jk.fizikal && typeof g.umur === "number" && g.umur >= had;
+      const sudah = idAhli.has(g.id);
+      return `<option value="${g.id}">${esc(g.nama)}${g.gred ? ` · ${esc(g.gred)}` : ""} · beban ${nf(g.beban)}${g.umur ? ` · ${g.umur} thn` : ""}${
+        sudah ? " · sudah dalam JK ini" : ""}${sekat ? " · ⚠ melebihi had umur fizikal" : ""}</option>`;
+    })
+    .join("")}`;
+  const padanGuru = (q) => {
+    const k = q.trim().toLowerCase();
+    if (!k) return guruSusun;
+    return guruSusun.filter((g) => [g.nama, g.no_gaji, g.gred].some((v) => String(v || "").toLowerCase().includes(k)));
+  };
 
   isi.innerHTML = `
   <div class="dua-lajur">
@@ -547,14 +560,10 @@ function viewLantikan() {
         <label>Jawatan<select name="jawatan" required>${S.jawatan
           .map((j) => `<option value="${j.id}">${esc(j.nama)} (asas ${nf(j.asas)})</option>`)
           .join("")}</select></label>
-        <label>Guru<select name="guru" required><option value="">Pilih guru…</option>${guruSusun
-          .map((g) => {
-            const sekat = jk.fizikal && typeof g.umur === "number" && g.umur >= had;
-            const sudah = idAhli.has(g.id);
-            return `<option value="${g.id}">${esc(g.nama)} · beban ${nf(g.beban)}${g.umur ? ` · ${g.umur} thn` : ""}${
-              sudah ? " · sudah dalam JK ini" : ""}${sekat ? " · ⚠ melebihi had umur fizikal" : ""}</option>`;
-          })
-          .join("")}</select></label>
+        <label>Guru
+          <input type="search" id="i-cari-guru" placeholder="Cari nama, no. gaji atau gred…" autocomplete="off">
+          <select name="guru" required>${opsGuru(guruSusun)}</select></label>
+        <p class="nota" id="nota-padanan"></p>
         <div class="baris-butang">
           <button type="button" id="b-cadang" class="sekunder">Cadang guru</button>
           <button class="utama" type="submit">Lantik</button>
@@ -580,6 +589,18 @@ function viewLantikan() {
   });
 
   const form = $("#f-lantik");
+  const iCariGuru = $("#i-cari-guru");
+  const tapisGuru = () => {
+    const pilih = form.guru.value;
+    const padan = padanGuru(iCariGuru.value);
+    form.guru.innerHTML = opsGuru(padan);
+    if (padan.some((g) => String(g.id) === pilih)) form.guru.value = pilih;
+    else if (padan.length === 1) form.guru.value = String(padan[0].id);
+    $("#nota-padanan").textContent = iCariGuru.value.trim()
+      ? `${padan.length} padanan${padan.length === 1 ? " — dipilih automatik" : ""}` : "";
+  };
+  iCariGuru.oninput = tapisGuru;
+  iCariGuru.onkeydown = (e) => { if (e.key === "Enter") e.preventDefault(); };
   $("#b-cadang").onclick = () => {
     const jw = S.jwMap.get(Number(form.jawatan.value));
     const calon = S.guruLengkap
@@ -589,6 +610,10 @@ function viewLantikan() {
     const slot = { jk: jk.nama, jawatan: jw.nama, tempoh: jk.tempoh, skala: jk.skala, fizikal: jk.fizikal };
     const hasil = agihSeimbang(calon, [slot], S.config, { kecualiPengurusan: S.kecualiPengurusan });
     if (!hasil.agihan.length) return toast("Tiada guru layak (had umur bagi JK fizikal).", "ralat");
+    if (![...form.guru.options].some((o) => o.value === hasil.agihan[0].guru)) {
+      iCariGuru.value = "";
+      tapisGuru();
+    }
     form.guru.value = hasil.agihan[0].guru;
     const g = S.guru.find((x) => String(x.id) === hasil.agihan[0].guru);
     $("#nota-cadang").textContent = `Cadangan: ${g?.nama}. Tekan "Lantik" untuk sahkan.`;
