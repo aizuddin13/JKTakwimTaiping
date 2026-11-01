@@ -31,6 +31,8 @@ const S = {
   guruEdit: null,
   guruCari: "",
   guruUnit: "",
+  bebanKumpulan: "",
+  bebanGred: "",
   guruTapis: { gred: "", jawatan: "", peranan: "", jk: "", umur: "" },
   jkEdit: null,
   surat: {
@@ -420,7 +422,18 @@ const stat = (label, nilai) => `<div class="stat"><span>${label}</span><strong>$
 
 function viewBeban() {
   const isi = $("#isi");
-  const senarai = [...S.guruLengkap].sort((a, b) => b.beban - a.beban);
+  const isGuruDG = (g) => /^DG/i.test(String(g.gred || "").trim());
+  const ikutKumpulan = S.guruLengkap.filter((g) =>
+    !S.bebanKumpulan || (S.bebanKumpulan === "guru" ? isGuruDG(g) : !isGuruDG(g)));
+  const senaraiGred = [...new Set(ikutKumpulan.map((g) => g.gred).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b), "ms", { numeric: true }));
+  if (S.bebanGred && !senaraiGred.includes(S.bebanGred)) S.bebanGred = "";
+  const senarai = ikutKumpulan.filter((g) => !S.bebanGred || g.gred === S.bebanGred)
+    .sort((a, b) => b.beban - a.beban);
+  const bilDG = S.guruLengkap.filter(isGuruDG).length;
+  const kumpulan = [["", "Semua", S.guruLengkap.length], ["guru", "Guru (DG)", bilDG],
+    ["sokongan", "Kakitangan sokongan", S.guruLengkap.length - bilDG]];
+  const labelBil = S.bebanKumpulan === "guru" ? "Guru" : S.bebanKumpulan === "sokongan" ? "Kakitangan" : "Guru & staf";
   const beban = senarai.map((g) => g.beban);
   const maks = beban.length ? Math.max(...beban) : 0;
   const min = beban.length ? Math.min(...beban) : 0;
@@ -432,8 +445,15 @@ function viewBeban() {
     <label class="semak"><input type="checkbox" id="c-kecuali" ${S.kecualiPengurusan ? "checked" : ""}>
       Kecualikan jawatan pengurusan (Penasihat, Pengerusi, Timbalan Pengerusi)</label>
   </div>
+  <div class="bar-alat">
+    <div class="segmen">${kumpulan
+      .map(([v, t, n]) => `<button type="button" data-kumpulan="${v}" class="${S.bebanKumpulan === v ? "aktif" : ""}">${t} <small>${n}</small></button>`)
+      .join("")}</div>
+    <select id="s-beban-gred" class="${S.bebanGred ? "aktif" : ""}"><option value="">Semua gred</option>${senaraiGred
+      .map((v) => `<option value="${esc(v)}" ${S.bebanGred === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+  </div>
   <div class="statistik">
-    ${stat("Guru", senarai.length)}${stat("Purata beban", nf(purata))}${stat("Tertinggi", nf(maks))}${stat("Terendah", nf(min))}${stat("Jurang", nf(maks - min))}
+    ${stat(labelBil, senarai.length)}${stat("Purata beban", nf(purata))}${stat("Tertinggi", nf(maks))}${stat("Terendah", nf(min))}${stat("Jurang", nf(maks - min))}
   </div>
   ${amaran.length ? `<div class="amaran"><strong>${amaran.length} amaran umur / JK fizikal</strong><ul>${amaran
     .map((a) => `<li>${esc(a.mesej)}</li>`)
@@ -441,17 +461,28 @@ function viewBeban() {
   <div class="kad">
     <div class="petunjuk"><span><i class="tinggi"></i>Melebihi 125% purata</span><span><i></i>Sekitar purata</span><span><i class="rendah"></i>Bawah 75% purata</span></div>
     <table class="jadual">
-      <thead><tr><th>Guru</th><th>Umur</th><th class="n">Lantikan</th><th class="n">Beban</th><th class="lebar">Taburan</th></tr></thead>
+      <thead><tr><th>Nama</th><th>Gred</th><th>Umur</th><th class="n">Lantikan</th><th class="n">Beban</th><th class="lebar">Taburan</th></tr></thead>
       <tbody>${senarai
         .map((g) => {
           const kelas = g.beban > purata * 1.25 ? "tinggi" : g.beban < purata * 0.75 ? "rendah" : "";
-          return `<tr><td>${esc(g.nama)}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
+          return `<tr><td>${esc(g.nama)}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
           <td class="n"><strong>${nf(g.beban)}</strong></td>
           <td><div class="palang"><span class="${kelas}" style="width:${maks ? (g.beban / maks) * 100 : 0}%"></span></div></td></tr>`;
         })
-        .join("") || `<tr><td colspan="5" class="kosong">Tiada guru lagi. Tambah guru di tab Guru.</td></tr>`}</tbody>
+        .join("") || `<tr><td colspan="6" class="kosong">${S.guruLengkap.length ? "Tiada padanan untuk penapis ini." : "Tiada guru lagi. Tambah guru di tab Guru."}</td></tr>`}</tbody>
     </table>
   </div>`;
+
+  isi.querySelectorAll("[data-kumpulan]").forEach((b) => {
+    b.onclick = () => {
+      S.bebanKumpulan = b.dataset.kumpulan;
+      viewBeban();
+    };
+  });
+  $("#s-beban-gred").onchange = (e) => {
+    S.bebanGred = e.target.value;
+    viewBeban();
+  };
 
   $("#c-kecuali").onchange = (e) => {
     S.kecualiPengurusan = e.target.checked;
