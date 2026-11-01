@@ -599,7 +599,7 @@ function viewGuru() {
   const cari = (S.guruCari || "").toLowerCase();
   const senarai = S.guru.filter((g) =>
     (!S.guruUnit || g.unit === S.guruUnit) &&
-    (!cari || [g.nama, g.no_gaji, g.jawatan_hakiki, g.email].some((v) => String(v || "").toLowerCase().includes(cari))));
+    (!cari || [g.nama, g.no_gaji, g.jawatan_hakiki, g.gred, g.email].some((v) => String(v || "").toLowerCase().includes(cari))));
 
   isi.innerHTML = `
   <div class="dua-lajur lebar-kiri">
@@ -607,17 +607,18 @@ function viewGuru() {
       <div class="bar-alat">
         <h3>Guru & staf (${senarai.length}${senarai.length !== S.guru.length ? ` daripada ${S.guru.length}` : ""})</h3>
         <div class="penapis">
-          <input id="i-cari" type="search" placeholder="Cari nama, no. gaji, jawatan…" value="${esc(S.guruCari || "")}">
+          <input id="i-cari" type="search" placeholder="Cari nama, no. gaji, jawatan, gred…" value="${esc(S.guruCari || "")}">
           <select id="s-unit"><option value="">Semua unit</option>${senaraiUnit
             .map((u) => `<option ${S.guruUnit === u ? "selected" : ""}>${esc(u)}</option>`).join("")}</select>
         </div>
       </div>
       <table class="jadual">
-        <thead><tr><th>Nama</th><th>Jawatan</th><th>No. Gaji</th><th>No. K/P</th><th>Umur</th><th>Peranan</th><th class="n">JK</th><th></th></tr></thead>
+        <thead><tr><th>Nama</th><th>Jawatan</th><th>Gred</th><th>No. Gaji</th><th>No. K/P</th><th>Umur</th><th>Peranan</th><th class="n">JK</th><th></th></tr></thead>
         <tbody>${senarai
           .map((g) => `<tr>
             <td>${esc(g.nama)}<span class="sub">${esc(g.unit || "")}</span></td>
             <td>${esc(g.jawatan_hakiki || "-")}</td>
+            <td class="nowrap">${esc(g.gred || "-")}</td>
             <td>${esc(g.no_gaji || "-")}</td>
             <td>${esc(topengKP(g.no_kp))}</td>
             <td>${g.umur ?? "-"}</td>
@@ -627,7 +628,7 @@ function viewGuru() {
             <td class="n">${bilLantikan(g.id)}</td>
             <td class="n nowrap"><button class="sekunder kecil" data-edit="${g.id}">Edit</button>
               <button class="bahaya kecil" data-padam="${g.id}">Padam</button></td></tr>`)
-          .join("") || `<tr><td colspan="8" class="kosong">Tiada padanan.</td></tr>`}</tbody>
+          .join("") || `<tr><td colspan="9" class="kosong">Tiada padanan.</td></tr>`}</tbody>
       </table>
     </section>
     <div>
@@ -661,7 +662,7 @@ function viewGuru() {
       </section>
       <section class="kad">
         <h3>Import ramai guru / staf</h3>
-        <p class="nota">Satu orang setiap baris: <code>nama, no_gaji, no_kp, jawatan, unit, email</code>. Boleh tampal terus dari Excel (dipisah tab). Umur dikira daripada No. K/P.</p>
+        <p class="nota">Satu orang setiap baris: <code>nama, no_gaji, no_kp, jawatan, unit, email, gred</code>. Boleh tampal terus dari Excel (dipisah tab). Umur dikira daripada No. K/P.</p>
         <textarea id="t-import" rows="5" placeholder="AHMAD BIN ALI&#9;212345&#9;850101015555&#9;GURU FIZIK&#9;JABATAN SAINS&#9;ahmad@mara.gov.my"></textarea>
         <div class="baris-butang"><button class="utama" id="b-import">Import</button></div>
       </section>
@@ -749,7 +750,7 @@ function viewGuru() {
     const baris = $("#t-import").value.split(/\r?\n/).map((b) => b.trim()).filter(Boolean);
     if (!baris.length) return toast("Tiada data untuk diimport.", "ralat");
     const rekod = baris.map((b) => {
-      const [nama, no_gaji, no_kp, jawatan, unit, email] = b.split(/\t|,/).map((x) => x.trim());
+      const [nama, no_gaji, no_kp, jawatan, unit, email, gred] = b.split(/\t|,/).map((x) => x.trim());
       const kp = kosongJadiNull(no_kp)?.replace(/\D/g, "") || null;
       return {
         nama,
@@ -758,6 +759,7 @@ function viewGuru() {
         umur: umurDariKP(kp),
         jawatan_hakiki: kosongJadiNull(jawatan),
         unit: kosongJadiNull(unit),
+        gred: kosongJadiNull(gred),
         email: kosongJadiNull(email)?.toLowerCase() ?? null,
       };
     }).filter((r) => r.nama);
