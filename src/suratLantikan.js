@@ -27,7 +27,7 @@ export function dataSurat(guru, config, maklumatSekolah = {}) {
 }
 
 // Render HTML ringkas, sedia cetak. Elak kebocoran: no. K/P boleh ditutup separa.
-export function suratHTML(data, { lindungKP = false } = {}) {
+export function suratHTML(data, { lindungKP = false, paparPemberat = true } = {}) {
   const kp = lindungKP && data.guru.no_kp
     ? data.guru.no_kp.replace(/\d(?=\d{4})/g, "*")
     : data.guru.no_kp;
@@ -35,10 +35,15 @@ export function suratHTML(data, { lindungKP = false } = {}) {
   const baris = data.lantikan.map((l) => `
       <tr>
         <td style="text-align:center">${l.bil}</td>
-        <td>${l.kod ? l.kod + " — " : ""}${escapeHtml(l.jk)}</td>
+        <td>${l.kod ? escapeHtml(l.kod) + " — " : ""}${escapeHtml(l.jk)}</td>
         <td>${escapeHtml(l.jawatan)}</td>
-        <td style="text-align:center">${l.pemberat}</td>
+        ${paparPemberat ? `<td style="text-align:center">${l.pemberat}</td>` : ""}
       </tr>`).join("");
+
+  const kepalaPemberat = paparPemberat ? `<th style="width:70px">Pemberat</th>` : "";
+  const kaki = paparPemberat
+    ? `<tfoot><tr><td colspan="3" style="text-align:right">Jumlah Beban</td><td style="text-align:center">${data.jumlahBeban}</td></tr></tfoot>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="ms"><head><meta charset="utf-8">
@@ -63,9 +68,9 @@ export function suratHTML(data, { lindungKP = false } = {}) {
   </div>
   <p>Dengan hormatnya tuan/puan dilantik memegang jawatan dalam jawatankuasa berikut:</p>
   <table>
-    <thead><tr><th style="width:40px">Bil</th><th>Jawatankuasa / Program</th><th>Jawatan</th><th style="width:70px">Pemberat</th></tr></thead>
+    <thead><tr><th style="width:40px">Bil</th><th>Jawatankuasa / Program</th><th>Jawatan</th>${kepalaPemberat}</tr></thead>
     <tbody>${baris}</tbody>
-    <tfoot><tr><td colspan="3" style="text-align:right">Jumlah Beban</td><td style="text-align:center">${data.jumlahBeban}</td></tr></tfoot>
+    ${kaki}
   </table>
   <p>Segala kerjasama dan komitmen tuan/puan didahului dengan ucapan terima kasih.</p>
   <div class="ttd">
