@@ -178,6 +178,12 @@ async function laluan() {
 
 // Config minimum untuk surat yang dicetak oleh guru (tanpa log masuk):
 // guru tidak mempunyai akses kepada jadual pemberat, dan surat guru tidak memaparkan pemberat.
+const LOGO_ATAS = `<div class="logo-atas">
+  <img src="assets/logo-mara.png" alt="Logo MARA" width="66" height="80">
+  <img src="assets/logo-mrsm.png" alt="Logo MRSM" width="96" height="80">
+</div>`;
+const LOGO_KAKI = `<div class="logo-kaki"><img src="assets/logo-ads.png" alt="Apple Distinguished School" width="184" height="30"></div>`;
+
 const CONFIG_SURAT_GURU = {
   faktor_tempoh: { tahunan: 1.0, one_off: 0.7 },
   faktor_skala: { besar: 1.2, sederhana: 1.0, kecil: 0.8 },
@@ -190,7 +196,7 @@ const CONFIG_SURAT_GURU = {
 function paparLogin(mod = "guru") {
   app.innerHTML = `
   <div class="login-wrap"><div class="kad login">
-    <div class="logo">JK</div>
+    ${LOGO_ATAS}
     <h1>JK Takwim</h1>
     <p class="sub">Agihan Tugas Jawatankuasa · ${esc(MAKLUMAT_SEKOLAH.nama)}</p>
     <div class="tab-kecil" role="tablist">
@@ -211,6 +217,7 @@ function paparLogin(mod = "guru") {
         </form>
         <p class="mesej" id="mesej"></p>
         <p class="nota">Untuk pentadbir sistem sahaja.</p>`}
+    ${LOGO_KAKI}
   </div></div>`;
 
   const tetapMesej = (t, j = "") => {
@@ -251,6 +258,7 @@ function paparHasilGuru(d) {
   const lantikan = d.lantikan || [];
   app.innerHTML = `
   <div class="login-wrap"><div class="kad hasil">
+    ${LOGO_ATAS}
     <div class="bar-alat">
       <div><span class="sub">Lantikan jawatankuasa</span><h2>${esc(d.nama)}</h2></div>
       <button class="sekunder kecil" id="b-kembali">Semak nombor lain</button>
@@ -265,6 +273,7 @@ function paparHasilGuru(d) {
     <div class="baris-butang">
       <button class="utama" id="b-cetak" ${lantikan.length ? "" : "disabled"}>Cetak surat lantikan</button>
     </div>
+    ${LOGO_KAKI}
   </div></div>`;
 
   $("#b-kembali").onclick = () => paparLogin("guru");
@@ -278,6 +287,7 @@ function paparHasilGuru(d) {
 
 function paparBukanAdmin() {
   app.innerHTML = `<div class="login-wrap"><div class="kad login">
+    ${LOGO_ATAS}
     <h2>Bukan akaun admin</h2>
     <p>Akaun <strong>${esc(S.session.user.email)}</strong> tidak didaftarkan sebagai admin dalam sistem ini.</p>
     <p class="nota">Guru boleh menyemak lantikan menggunakan No. Gaji tanpa log masuk.</p>
@@ -304,7 +314,7 @@ function render() {
 
   app.innerHTML = `
   <header class="atas">
-    <div class="jenama"><span class="logo kecil">JK</span><div><strong>JK Takwim</strong><span class="sub">${esc(MAKLUMAT_SEKOLAH.nama)}</span></div></div>
+    <div class="jenama"><img src="assets/logo-mara.png" alt="MARA" class="logo-kepala"><img src="assets/logo-mrsm.png" alt="MRSM" class="logo-kepala"><div><strong>JK Takwim</strong><span class="sub">${esc(MAKLUMAT_SEKOLAH.nama)}</span></div></div>
     <div class="pengguna"><span>${esc(S.saya.nama)}</span><span class="lencana">${admin ? "Admin" : "Guru"}</span>
       <button id="b-kata" class="sekunder kecil">Tukar kata laluan</button>
       <button id="b-keluar" class="sekunder kecil">Log keluar</button></div>
@@ -312,7 +322,8 @@ function render() {
   <nav class="tabs">${tabs
     .map(([k, v]) => `<button data-tab="${k}" class="${S.tab === k ? "aktif" : ""}">${v}</button>`)
     .join("")}</nav>
-  <main id="isi"></main>`;
+  <main id="isi"></main>
+  <footer class="kaki-admin">${LOGO_KAKI}</footer>`;
 
   $("#b-keluar").onclick = () => sb.auth.signOut();
   $("#b-kata").onclick = bukaTukarKataLaluan;
