@@ -76,6 +76,7 @@ function toast(mesej, jenis = "ok") {
 }
 
 function mesejRalat(e) {
+  if (/invalid login credentials/i.test(e?.message || "")) return "Email atau kata laluan salah.";
   if (e?.code === "23505") return "Rekod bertindih: data yang sama sudah wujud.";
   if (e?.code === "23503") return "Tidak boleh dipadam: rekod ini masih digunakan oleh lantikan.";
   return e?.message || String(e);
@@ -162,9 +163,8 @@ async function laluan() {
       await sb.from("guru").select("*").eq("auth_id", S.session.user.id).maybeSingle()
     );
     S.saya = saya;
-    if (!saya) return paparBelumDaftar();
+    if (!saya || saya.peranan !== "admin") return paparBukanAdmin();
     await muatSemua();
-    if (S.saya.peranan !== "admin") S.tab = "saya";
     render();
   } catch (e) {
     console.error(e);
@@ -174,29 +174,43 @@ async function laluan() {
   }
 }
 
-function paparLogin(mesej = "", jenis = "") {
-  const redirect = location.origin + location.pathname;
+// Config minimum untuk surat yang dicetak oleh guru (tanpa log masuk):
+// guru tidak mempunyai akses kepada jadual pemberat, dan surat guru tidak memaparkan pemberat.
+const CONFIG_SURAT_GURU = {
+  faktor_tempoh: { tahunan: 1.0, one_off: 0.7 },
+  faktor_skala: { besar: 1.2, sederhana: 1.0, kecil: 0.8 },
+  tetapan: {},
+  jawatan_utama: [],
+  jawatan_kokurikulum: [],
+  subtugas_one_off: [],
+};
+
+function paparLogin(mod = "guru") {
   app.innerHTML = `
   <div class="login-wrap"><div class="kad login">
     <div class="logo">JK</div>
     <h1>JK Takwim</h1>
     <p class="sub">Agihan Tugas Jawatankuasa · ${esc(MAKLUMAT_SEKOLAH.nama)}</p>
     <div class="tab-kecil" role="tablist">
-      <button type="button" data-mod="pautan" class="aktif">Pautan email</button>
-      <button type="button" data-mod="kata">Kata laluan</button>
+      <button type="button" data-mod="guru" class="${mod === "guru" ? "aktif" : ""}">Semak Lantikan</button>
+      <button type="button" data-mod="admin" class="${mod === "admin" ? "aktif" : ""}">Admin</button>
     </div>
-    <form id="f-login">
-      <label>Email<input type="email" name="email" required autocomplete="email" placeholder="nama@contoh.com"></label>
-      <label class="hanya-kata" hidden>Kata laluan<input type="password" name="kata" minlength="6" autocomplete="current-password"></label>
-      <button class="utama penuh" type="submit" id="b-hantar">Hantar pautan log masuk</button>
-      <button class="pautan hanya-kata" type="button" id="b-daftar" hidden>Belum ada kata laluan? Daftar akaun</button>
-    </form>
-    <p class="mesej ${jenis}" id="mesej">${esc(mesej)}</p>
-    <p class="nota">Hanya guru yang emailnya telah didaftarkan oleh admin boleh melihat data.</p>
+    ${mod === "guru"
+      ? `<form id="f-semak">
+          <label>No. Gaji<input name="no_gaji" required autocomplete="off" placeholder="Masukkan nombor gaji anda"></label>
+          <button class="utama penuh" type="submit">Semak lantikan saya</button>
+        </form>
+        <p class="mesej" id="mesej"></p>
+        <p class="nota">Masukkan nombor gaji untuk melihat dan mencetak surat lantikan jawatankuasa anda.</p>`
+      : `<form id="f-admin">
+          <label>Email<input type="email" name="email" required autocomplete="username"></label>
+          <label>Kata laluan<input type="password" name="kata" required autocomplete="current-password"></label>
+          <button class="utama penuh" type="submit">Log masuk admin</button>
+        </form>
+        <p class="mesej" id="mesej"></p>
+        <p class="nota">Untuk pentadbir sistem sahaja.</p>`}
   </div></div>`;
 
-  let mod = "pautan";
-  const form = $("#f-login");
   const tetapMesej = (t, j = "") => {
     const m = $("#mesej");
     m.textContent = t;
@@ -204,27 +218,24 @@ function paparLogin(mesej = "", jenis = "") {
   };
 
   app.querySelectorAll("[data-mod]").forEach((b) => {
-    b.onclick = () => {
-      mod = b.dataset.mod;
-      app.querySelectorAll("[data-mod]").forEach((x) => x.classList.toggle("aktif", x === b));
-      app.querySelectorAll(".hanya-kata").forEach((x) => (x.hidden = mod !== "kata"));
-      form.kata.required = mod === "kata";
-      $("#b-hantar").textContent = mod === "kata" ? "Log masuk" : "Hantar pautan log masuk";
-      tetapMesej("");
-    };
+    b.onclick = () => paparLogin(b.dataset.mod);
   });
 
-  form.onsubmit = async (e) => {
+  const borang = $("#f-semak") || $("#f-admin");
+  borang.querySelector("input").focus();
+
+  borang.onsubmit = async (e) => {
     e.preventDefault();
-    const email = form.email.value.trim();
-    const butang = $("#b-hantar");
+    const butang = borang.querySelector("button[type=submit]");
     butang.disabled = true;
+    tetapMesej("");
     try {
-      if (mod === "pautan") {
-        semak(await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirect } }));
-        tetapMesej("Pautan log masuk telah dihantar. Semak email anda (termasuk folder spam).", "ok");
+      if (mod === "guru") {
+        const data = semak(await sb.rpc("semak_lantikan", { p_no_gaji: borang.no_gaji.value }));
+        if (!data) tetapMesej("No. gaji tidak dijumpai. Semak semula atau hubungi admin.", "ralat");
+        else paparHasilGuru(data);
       } else {
-        semak(await sb.auth.signInWithPassword({ email, password: form.kata.value }));
+        semak(await sb.auth.signInWithPassword({ email: borang.email.value.trim(), password: borang.kata.value }));
       }
     } catch (err) {
       tetapMesej(mesejRalat(err), "ralat");
@@ -232,28 +243,44 @@ function paparLogin(mesej = "", jenis = "") {
       butang.disabled = false;
     }
   };
-
-  $("#b-daftar").onclick = async () => {
-    const email = form.email.value.trim();
-    const kata = form.kata.value;
-    if (!email || kata.length < 6) return tetapMesej("Isi email dan kata laluan (minimum 6 aksara) dahulu.", "ralat");
-    try {
-      const data = semak(await sb.auth.signUp({ email, password: kata, options: { emailRedirectTo: redirect } }));
-      if (!data.session) tetapMesej("Akaun dicipta. Semak email untuk mengesahkan akaun.", "ok");
-    } catch (err) {
-      tetapMesej(mesejRalat(err), "ralat");
-    }
-  };
 }
 
-function paparBelumDaftar() {
-  app.innerHTML = `<div class="login-wrap"><div class="kad login">
-    <h2>Akaun belum didaftarkan</h2>
-    <p>Anda log masuk sebagai <strong>${esc(S.session.user.email)}</strong>, tetapi email ini belum didaftarkan sebagai guru dalam sistem.</p>
-    <p>Minta admin menambah email ini dalam tab Guru, kemudian muat semula halaman.</p>
-    <div class="baris-butang"><button class="utama" id="b-muat">Muat semula</button><button class="sekunder" id="b-keluar">Log keluar</button></div>
+function paparHasilGuru(d) {
+  const lantikan = d.lantikan || [];
+  app.innerHTML = `
+  <div class="login-wrap"><div class="kad hasil">
+    <div class="bar-alat">
+      <div><span class="sub">Lantikan jawatankuasa</span><h2>${esc(d.nama)}</h2></div>
+      <button class="sekunder kecil" id="b-kembali">Semak nombor lain</button>
+    </div>
+    <p class="info">${lantikan.length} lantikan · Sesi ${esc(MAKLUMAT_SEKOLAH.sesi)}</p>
+    <table class="jadual">
+      <thead><tr><th>Kod</th><th>Jawatankuasa / Program</th><th>Jawatan</th></tr></thead>
+      <tbody>${lantikan
+        .map((l) => `<tr><td><strong>${esc(l.kod)}</strong></td><td>${esc(l.jk)}</td><td>${esc(l.jawatan)}</td></tr>`)
+        .join("") || `<tr><td colspan="3" class="kosong">Tiada lantikan direkodkan untuk anda.</td></tr>`}</tbody>
+    </table>
+    <div class="baris-butang">
+      <button class="utama" id="b-cetak" ${lantikan.length ? "" : "disabled"}>Cetak surat lantikan</button>
+    </div>
   </div></div>`;
-  $("#b-muat").onclick = () => laluan();
+
+  $("#b-kembali").onclick = () => paparLogin("guru");
+  $("#b-cetak").onclick = () =>
+    cetak(binaSurat(
+      [{ nama: d.nama, no_kp: d.no_kp, no_gaji: d.no_gaji, lantikan }],
+      { lindungKP: false, paparPemberat: false },
+      CONFIG_SURAT_GURU
+    ));
+}
+
+function paparBukanAdmin() {
+  app.innerHTML = `<div class="login-wrap"><div class="kad login">
+    <h2>Bukan akaun admin</h2>
+    <p>Akaun <strong>${esc(S.session.user.email)}</strong> tidak didaftarkan sebagai admin dalam sistem ini.</p>
+    <p class="nota">Guru boleh menyemak lantikan menggunakan No. Gaji tanpa log masuk.</p>
+    <div class="baris-butang"><button class="utama" id="b-keluar">Log keluar</button></div>
+  </div></div>`;
   $("#b-keluar").onclick = () => sb.auth.signOut();
 }
 
@@ -269,8 +296,8 @@ const TAB_ADMIN = [
 ];
 
 function render() {
-  const admin = S.saya.peranan === "admin";
-  const tabs = admin ? TAB_ADMIN : [["saya", "Lantikan Saya"]];
+  const admin = true;
+  const tabs = TAB_ADMIN;
   if (!tabs.some(([k]) => k === S.tab)) S.tab = tabs[0][0];
 
   app.innerHTML = `
@@ -299,7 +326,6 @@ function render() {
     jk: viewJK,
     pemberat: viewPemberat,
     surat: viewSurat,
-    saya: viewSaya,
   })[S.tab]();
 }
 
@@ -494,10 +520,10 @@ function viewGuru() {
         <h3>${ed ? "Edit guru" : "Tambah guru"}</h3>
         <form id="f-guru">
           <label>Nama penuh<input name="nama" required value="${esc(ed?.nama)}"></label>
-          <label>Email (untuk log masuk)<input name="email" type="email" value="${esc(ed?.email)}"></label>
+          <label>Email (admin sahaja, untuk log masuk)<input name="email" type="email" value="${esc(ed?.email)}"></label>
           <div class="grid-2">
             <label>No. K/P<input name="no_kp" value="${esc(ed?.no_kp)}"></label>
-            <label>No. Gaji<input name="no_gaji" value="${esc(ed?.no_gaji)}"></label>
+            <label>No. Gaji (untuk semakan guru)<input name="no_gaji" value="${esc(ed?.no_gaji)}"></label>
           </div>
           <div class="grid-2">
             <label>Umur<input name="umur" type="number" min="18" max="75" value="${esc(ed?.umur)}"></label>
@@ -805,7 +831,7 @@ function gabungSurat(halaman) {
     .join("")}</body></html>`;
 }
 
-function binaSurat(senaraiGuru, opsyen) {
+function binaSurat(senaraiGuru, opsyen, config = S.config) {
   const maklumat = {
     nama: MAKLUMAT_SEKOLAH.nama,
     sesi: S.surat.sesi,
@@ -814,7 +840,7 @@ function binaSurat(senaraiGuru, opsyen) {
       : "",
     penandatangan: S.surat.penandatangan,
   };
-  return gabungSurat(senaraiGuru.map((g) => suratHTML(dataSurat(g, S.config, maklumat), opsyen)));
+  return gabungSurat(senaraiGuru.map((g) => suratHTML(dataSurat(g, config, maklumat), opsyen)));
 }
 
 function cetak(html) {
@@ -878,31 +904,6 @@ function viewSurat() {
     viewSurat();
   };
   $("#b-cetak").onclick = () => cetak(binaSurat(pilihan, opsyen));
-}
-
-// ---------- Tab: Lantikan Saya (guru biasa) ----------
-
-function viewSaya() {
-  const isi = $("#isi");
-  const g = S.guruLengkap.find((x) => x.id === S.saya.id);
-  const indeks = binaIndeks(S.config);
-  const lantikan = g?.lantikan || [];
-
-  isi.innerHTML = `
-  <div class="statistik">${stat("Jumlah lantikan", lantikan.length)}${stat("Jumlah beban", nf(kiraBebanGuru(g, S.config).jumlahBeban))}</div>
-  <section class="kad">
-    <div class="bar-alat"><h3>Lantikan jawatankuasa saya</h3>
-      <button class="utama" id="b-cetak" ${lantikan.length ? "" : "disabled"}>Cetak surat lantikan</button></div>
-    <table class="jadual">
-      <thead><tr><th>Kod</th><th>Jawatankuasa / Program</th><th>Jawatan</th><th class="n">Pemberat</th></tr></thead>
-      <tbody>${lantikan
-        .map((l) => `<tr><td>${esc(l.kod)}</td><td>${esc(l.jk)}</td><td>${esc(l.jawatan)}</td>
-          <td class="n">${nf(kiraPemberat(l, S.config, indeks).pemberat)}</td></tr>`)
-        .join("") || `<tr><td colspan="4" class="kosong">Anda belum mempunyai sebarang lantikan.</td></tr>`}</tbody>
-    </table>
-  </section>`;
-
-  $("#b-cetak").onclick = () => cetak(binaSurat([g], { lindungKP: false, paparPemberat: false }));
 }
 
 mula();

@@ -6,9 +6,8 @@ App agihan tugas jawatankuasa sekolah — agih tugas guru merentas jawatankuasa 
 
 Laman: **https://aizuddin13.github.io/JKTakwimTaiping/**
 
-- **Admin**: Papan Beban, Lantikan (dengan cadangan guru beban terendah), Guru (termasuk import dari Excel), Jawatankuasa, Pemberat, Surat Lantikan (cetak seorang atau semua).
-- **Guru**: Lantikan Saya + cetak surat lantikan sendiri.
-- Log masuk melalui pautan email atau kata laluan. Guru mesti didaftarkan oleh admin (ikut email) sebelum boleh melihat data.
+- **Guru**: tiada log masuk. Masukkan No. Gaji untuk melihat lantikan sendiri dan mencetak surat lantikan (No. K/P bertopeng, tanpa pemberat). Had 10 cubaan gagal / 15 minit.
+- **Admin**: log masuk dengan email + kata laluan. Akaun admin didaftarkan secara manual (lihat di bawah). Tab: Papan Beban, Lantikan (dengan cadangan guru beban terendah), Guru (termasuk import dari Excel), Jawatankuasa, Pemberat, Surat Lantikan.
 
 Backend: Supabase projek `jk-takwim-taiping`.
 
@@ -24,7 +23,8 @@ src/penyeimbang.js           Auto-balance slot kosong + kekangan umur/fizikal
 src/supabaseData.js          Jambatan data Supabase -> fungsi pengiraan
 src/suratLantikan.js         Jana surat lantikan (HTML, topeng No. K/P)
 supabase/schema.sql          Migration 1–2: jadual + RLS + seed pemberat
-supabase/pautan_login.sql    Migration 3: pautan login ikut email + admin pertama
+supabase/pautan_login.sql    Migration 3: pautan login ikut email
+supabase/semak_lantikan.sql  Migration 4: semakan guru ikut No. Gaji + had cubaan
 supabase/seed_jawatankuasa.sql  96 jawatankuasa A1–E36
 contoh/                      Contoh output
 ```
@@ -56,10 +56,16 @@ Nilai asas pemberat (Penyelaras = 10 hingga Penasihat = 2) ditala dalam `data/pe
 | `muatDanKira` | supabaseData.js | Muat data Supabase + kira |
 | `suratHTML` | suratLantikan.js | Jana surat lantikan |
 
-## Tetapan Supabase yang perlu dibuat secara manual
+## Daftar akaun admin (manual)
 
-Dashboard Supabase → Authentication → URL Configuration:
-- **Site URL**: `https://aizuddin13.github.io/JKTakwimTaiping/`
-- **Redirect URLs**: tambah `https://aizuddin13.github.io/JKTakwimTaiping/**`
-
-Tanpa ini, pautan log masuk dalam email akan menghala ke `localhost`.
+1. Supabase → **Authentication → Sign In / Providers**: matikan **Allow new users to sign up**.
+2. Supabase → **Authentication → Users → Add user → Create new user**: isi email + kata laluan, tanda **Auto Confirm User**.
+3. Supabase → **SQL Editor**, jalankan (ganti email):
+   ```sql
+   update guru set email = lower('email-admin@contoh.com') where id = 1 and peranan = 'admin';
+   ```
+   Untuk admin tambahan:
+   ```sql
+   insert into guru (nama, email, peranan) values ('Nama Admin', lower('email@contoh.com'), 'admin');
+   ```
+Akaun log masuk dipautkan ke rekod admin secara automatik ikut email (urutan langkah 2 dan 3 tidak penting).
