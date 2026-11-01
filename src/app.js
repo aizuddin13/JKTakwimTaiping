@@ -29,6 +29,8 @@ const S = {
   jkPilih: null,
   jkTapis: "",
   guruEdit: null,
+  guruCari: "",
+  guruUnit: "",
   jkEdit: null,
   surat: {
     sesi: MAKLUMAT_SEKOLAH.sesi,
@@ -564,44 +566,82 @@ function viewLantikan() {
 
 // ---------- Tab: Guru ----------
 
+// Umur daripada No. K/P (YYMMDD...) setakat hari ini.
+function umurDariKP(kp) {
+  const s = String(kp || "").replace(/\D/g, "");
+  if (s.length !== 12) return null;
+  const yy = Number(s.slice(0, 2)), mm = Number(s.slice(2, 4)), dd = Number(s.slice(4, 6));
+  const kini = new Date();
+  const tahun = yy > kini.getFullYear() % 100 ? 1900 + yy : 2000 + yy;
+  const lahir = new Date(tahun, mm - 1, dd);
+  if (lahir.getMonth() !== mm - 1) return null;
+  let umur = kini.getFullYear() - tahun;
+  if (kini.getMonth() < mm - 1 || (kini.getMonth() === mm - 1 && kini.getDate() < dd)) umur -= 1;
+  return umur >= 18 && umur <= 75 ? umur : null;
+}
+
 function viewGuru() {
   const isi = $("#isi");
   const ed = S.guruEdit ? S.guru.find((g) => g.id === S.guruEdit) : null;
   const bilLantikan = (id) => S.lantikan.filter((l) => l.guru_id === id).length;
+  const senaraiUnit = [...new Set(S.guru.map((g) => g.unit).filter(Boolean))].sort();
+  const cari = (S.guruCari || "").toLowerCase();
+  const senarai = S.guru.filter((g) =>
+    (!S.guruUnit || g.unit === S.guruUnit) &&
+    (!cari || [g.nama, g.no_gaji, g.jawatan_hakiki, g.email].some((v) => String(v || "").toLowerCase().includes(cari))));
 
   isi.innerHTML = `
   <div class="dua-lajur lebar-kiri">
     <section class="kad">
-      <h3>Senarai guru (${S.guru.length})</h3>
+      <div class="bar-alat">
+        <h3>Guru & staf (${senarai.length}${senarai.length !== S.guru.length ? ` daripada ${S.guru.length}` : ""})</h3>
+        <div class="penapis">
+          <input id="i-cari" type="search" placeholder="Cari nama, no. gaji, jawatan…" value="${esc(S.guruCari || "")}">
+          <select id="s-unit"><option value="">Semua unit</option>${senaraiUnit
+            .map((u) => `<option ${S.guruUnit === u ? "selected" : ""}>${esc(u)}</option>`).join("")}</select>
+        </div>
+      </div>
       <table class="jadual">
-        <thead><tr><th>Nama</th><th>Email</th><th>No. K/P</th><th>Umur</th><th>Peranan</th><th>Log masuk</th><th class="n">Lantikan</th><th></th></tr></thead>
-        <tbody>${S.guru
+        <thead><tr><th>Nama</th><th>Jawatan</th><th>No. Gaji</th><th>No. K/P</th><th>Umur</th><th>Peranan</th><th class="n">JK</th><th></th></tr></thead>
+        <tbody>${senarai
           .map((g) => `<tr>
-            <td>${esc(g.nama)}</td><td>${esc(g.email || "-")}</td><td>${esc(topengKP(g.no_kp))}</td><td>${g.umur ?? "-"}</td>
-            <td>${g.peranan === "admin" ? '<span class="tag">Admin</span>' : "Guru"}</td>
-            <td>${g.auth_id ? '<span class="tag ok">Aktif</span>' : '<span class="tag">Belum</span>'}</td>
+            <td>${esc(g.nama)}<span class="sub">${esc(g.unit || "")}</span></td>
+            <td>${esc(g.jawatan_hakiki || "-")}</td>
+            <td>${esc(g.no_gaji || "-")}</td>
+            <td>${esc(topengKP(g.no_kp))}</td>
+            <td>${g.umur ?? "-"}</td>
+            <td>${g.peranan === "admin"
+              ? `<span class="tag">Admin</span> ${g.auth_id ? '<span class="tag ok">Akaun aktif</span>' : '<span class="tag">Tiada akaun</span>'}`
+              : "Guru/Staf"}</td>
             <td class="n">${bilLantikan(g.id)}</td>
             <td class="n nowrap"><button class="sekunder kecil" data-edit="${g.id}">Edit</button>
               <button class="bahaya kecil" data-padam="${g.id}">Padam</button></td></tr>`)
-          .join("") || `<tr><td colspan="8" class="kosong">Tiada guru.</td></tr>`}</tbody>
+          .join("") || `<tr><td colspan="8" class="kosong">Tiada padanan.</td></tr>`}</tbody>
       </table>
     </section>
     <div>
       <section class="kad">
-        <h3>${ed ? "Edit guru" : "Tambah guru"}</h3>
+        <h3>${ed ? "Edit guru / staf" : "Tambah guru / staf"}</h3>
         <form id="f-guru">
           <label>Nama penuh<input name="nama" required value="${esc(ed?.nama)}"></label>
-          <label>Email (admin sahaja, untuk log masuk)<input name="email" type="email" value="${esc(ed?.email)}"></label>
+          <label>Jawatan<input name="jawatan_hakiki" value="${esc(ed?.jawatan_hakiki)}" placeholder="cth GURU MATEMATIK"></label>
           <div class="grid-2">
-            <label>No. K/P<input name="no_kp" value="${esc(ed?.no_kp)}"></label>
-            <label>No. Gaji (untuk semakan guru)<input name="no_gaji" value="${esc(ed?.no_gaji)}"></label>
+            <label>Unit<input name="unit" list="dl-unit" value="${esc(ed?.unit)}"></label>
+            <label>Gred<input name="gred" value="${esc(ed?.gred)}"></label>
+          </div>
+          <datalist id="dl-unit">${senaraiUnit.map((u) => `<option value="${esc(u)}">`).join("")}</datalist>
+          <div class="grid-2">
+            <label>No. Gaji (untuk semakan)<input name="no_gaji" required value="${esc(ed?.no_gaji)}"></label>
+            <label>No. K/P<input name="no_kp" value="${esc(ed?.no_kp)}" inputmode="numeric"></label>
           </div>
           <div class="grid-2">
-            <label>Umur<input name="umur" type="number" min="18" max="75" value="${esc(ed?.umur)}"></label>
+            <label>Umur<input name="umur" type="number" min="18" max="75" value="${esc(ed?.umur)}" placeholder="auto dari K/P"></label>
             <label>Peranan<select name="peranan">
-              <option value="guru" ${ed?.peranan !== "admin" ? "selected" : ""}>Guru</option>
+              <option value="guru" ${ed?.peranan !== "admin" ? "selected" : ""}>Guru / Staf</option>
               <option value="admin" ${ed?.peranan === "admin" ? "selected" : ""}>Admin</option></select></label>
           </div>
+          <label>Email<input name="email" type="email" value="${esc(ed?.email)}"></label>
+          <p class="nota">Hanya peranan Admin boleh log masuk (akaun dicipta di Supabase). Guru/staf menyemak lantikan dengan No. Gaji.</p>
           <div class="baris-butang">
             ${ed ? '<button type="button" class="sekunder" id="b-batal">Batal</button>' : ""}
             <button class="utama" type="submit">${ed ? "Simpan" : "Tambah"}</button>
@@ -609,18 +649,33 @@ function viewGuru() {
         </form>
       </section>
       <section class="kad">
-        <h3>Import ramai guru</h3>
-        <p class="nota">Satu guru setiap baris: <code>nama, email, no_kp, no_gaji, umur</code>. Boleh tampal terus dari Excel (dipisah tab). Medan selain nama boleh dibiarkan kosong.</p>
-        <textarea id="t-import" rows="6" placeholder="Ahmad bin Ali, ahmad@contoh.com, 850101015555, 1234567, 41"></textarea>
+        <h3>Import ramai guru / staf</h3>
+        <p class="nota">Satu orang setiap baris: <code>nama, no_gaji, no_kp, jawatan, unit, email</code>. Boleh tampal terus dari Excel (dipisah tab). Umur dikira daripada No. K/P.</p>
+        <textarea id="t-import" rows="5" placeholder="AHMAD BIN ALI&#9;212345&#9;850101015555&#9;GURU FIZIK&#9;JABATAN SAINS&#9;ahmad@mara.gov.my"></textarea>
         <div class="baris-butang"><button class="utama" id="b-import">Import</button></div>
       </section>
     </div>
   </div>`;
 
+  const iCari = $("#i-cari");
+  iCari.oninput = () => {
+    S.guruCari = iCari.value;
+    const pos = iCari.selectionStart;
+    viewGuru();
+    const baru = $("#i-cari");
+    baru.focus();
+    baru.setSelectionRange(pos, pos);
+  };
+  $("#s-unit").onchange = (e) => {
+    S.guruUnit = e.target.value;
+    viewGuru();
+  };
+
   isi.querySelectorAll("[data-edit]").forEach((b) => {
     b.onclick = () => {
       S.guruEdit = Number(b.dataset.edit);
       viewGuru();
+      $("#f-guru").scrollIntoView({ behavior: "smooth", block: "start" });
     };
   });
 
@@ -634,7 +689,7 @@ function viewGuru() {
         semak(await sb.from("guru").delete().eq("id", id));
         if (S.guruEdit === id) S.guruEdit = null;
         await segarkan();
-      }, "Guru dipadam.");
+      }, "Rekod dipadam.");
     };
   });
 
@@ -646,44 +701,60 @@ function viewGuru() {
   }
 
   const form = $("#f-guru");
+  form.no_kp.addEventListener("change", () => {
+    const u = umurDariKP(form.no_kp.value);
+    if (u && !form.umur.value) form.umur.value = u;
+  });
+
   form.onsubmit = (e) => {
     e.preventDefault();
+    const no_kp = kosongJadiNull(form.no_kp.value)?.replace(/\D/g, "") || null;
     const rekod = {
       nama: form.nama.value.trim(),
-      email: kosongJadiNull(form.email.value)?.toLowerCase() ?? null,
-      no_kp: kosongJadiNull(form.no_kp.value),
+      jawatan_hakiki: kosongJadiNull(form.jawatan_hakiki.value),
+      unit: kosongJadiNull(form.unit.value),
+      gred: kosongJadiNull(form.gred.value),
       no_gaji: kosongJadiNull(form.no_gaji.value),
-      umur: form.umur.value ? Number(form.umur.value) : null,
+      no_kp,
+      umur: form.umur.value ? Number(form.umur.value) : umurDariKP(no_kp),
+      email: kosongJadiNull(form.email.value)?.toLowerCase() ?? null,
       peranan: form.peranan.value,
     };
     if (ed && ed.id === S.saya.id && rekod.peranan !== "admin") {
       return toast("Anda tidak boleh menurunkan peranan admin anda sendiri.", "ralat");
+    }
+    if (rekod.peranan === "admin" && !rekod.email) {
+      return toast("Admin mesti mempunyai email untuk log masuk.", "ralat");
     }
     cuba(async () => {
       if (ed) semak(await sb.from("guru").update(rekod).eq("id", ed.id));
       else semak(await sb.from("guru").insert(rekod));
       S.guruEdit = null;
       await segarkan();
-    }, ed ? "Guru dikemas kini." : "Guru ditambah.");
+    }, ed ? "Rekod dikemas kini." : "Rekod ditambah.");
   };
 
   $("#b-import").onclick = () => {
     const baris = $("#t-import").value.split(/\r?\n/).map((b) => b.trim()).filter(Boolean);
     if (!baris.length) return toast("Tiada data untuk diimport.", "ralat");
     const rekod = baris.map((b) => {
-      const [nama, email, no_kp, no_gaji, umur] = b.split(/\t|,/).map((x) => x.trim());
+      const [nama, no_gaji, no_kp, jawatan, unit, email] = b.split(/\t|,/).map((x) => x.trim());
+      const kp = kosongJadiNull(no_kp)?.replace(/\D/g, "") || null;
       return {
         nama,
-        email: kosongJadiNull(email)?.toLowerCase() ?? null,
-        no_kp: kosongJadiNull(no_kp),
         no_gaji: kosongJadiNull(no_gaji),
-        umur: umur && !isNaN(Number(umur)) ? Number(umur) : null,
+        no_kp: kp,
+        umur: umurDariKP(kp),
+        jawatan_hakiki: kosongJadiNull(jawatan),
+        unit: kosongJadiNull(unit),
+        email: kosongJadiNull(email)?.toLowerCase() ?? null,
       };
     }).filter((r) => r.nama);
     cuba(async () => {
       semak(await sb.from("guru").insert(rekod));
+      $("#t-import").value = "";
       await segarkan();
-    }, `${rekod.length} guru diimport.`);
+    }, `${rekod.length} rekod diimport.`);
   };
 }
 

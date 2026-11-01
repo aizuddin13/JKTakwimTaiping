@@ -65,3 +65,40 @@ end $$;
 
 revoke execute on function public.semak_lantikan(text) from public;
 grant execute on function public.semak_lantikan(text) to anon, authenticated;
+
+-- Migration 5: maklumat staf + pautan log masuk untuk admin sahaja.
+alter table guru add column if not exists jawatan_hakiki text;
+alter table guru add column if not exists gred text;
+alter table guru add column if not exists unit text;
+
+create or replace function private.pautkan_auth_baru()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  update public.guru set auth_id = new.id
+  where lower(email) = lower(new.email) and peranan = 'admin' and auth_id is null;
+  return new;
+end $$;
+
+create or replace function private.pautkan_guru_email()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.peranan <> 'admin' then
+    new.auth_id := null;
+    return new;
+  end if;
+  if tg_op = 'UPDATE' and new.email is distinct from old.email then
+    new.auth_id := null;
+  end if;
+  if new.email is not null and new.auth_id is null then
+    select u.id into new.auth_id from auth.users u
+    where lower(u.email) = lower(new.email) limit 1;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists guru_pautkan_email on guru;
+create trigger guru_pautkan_email
+  before insert or update of email, peranan on guru
+  for each row execute function private.pautkan_guru_email();
+
+-- Data guru & staf diimport terus ke pangkalan data (TIDAK disimpan dalam repo kerana mengandungi data peribadi).
