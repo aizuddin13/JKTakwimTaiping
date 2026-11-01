@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "nama": "Pemberat Agihan Tugas Jawatankuasa",
+    "sumber": "MEMO Senarai Jawatankuasa MRSM Taiping 2025/2026",
+    "versi": "1.0",
+    "skala": "1-10 (berlabuh pada Penyelaras = 10 tahunan)",
+    "formula": "pemberat_akhir = asas_jawatan * faktor_tempoh * faktor_skala",
+    "catatan": "faktor_skala hanya dikenakan untuk program one-off"
+  },
+  "faktor_tempoh": {
+    "tahunan": 1.0,
+    "one_off": 0.7
+  },
+  "faktor_skala": {
+    "besar": 1.2,
+    "sederhana": 1.0,
+    "kecil": 0.8
+  },
+  "tetapan": {
+    "had_umur_fizikal": 50,
+    "nota_umur": "Guru berumur >= had ini diberi amaran jika dipadankan dengan JK/program yang ditanda fizikal."
+  },
+  "jawatan_utama": [
+    { "jawatan": "Penyelaras", "alias": ["Ketua Penyelaras"], "asas": 10, "kategori": "pelaksana", "nota": "Nadi operasi" },
+    { "jawatan": "Setiausaha", "alias": [], "asas": 9, "kategori": "pelaksana", "nota": "Dokumentasi & minit berterusan" },
+    { "jawatan": "Pengerusi", "alias": [], "asas": 8, "kategori": "pengurusan", "nota": "Pimpin & akauntabel; selalunya jawatan hakiki pengurusan" },
+    { "jawatan": "Bendahari", "alias": [], "asas": 8, "kategori": "pelaksana", "nota": "Akauntabiliti kewangan" },
+    { "jawatan": "Ketua", "alias": ["Ketua Unit", "Ketua Zon", "Ketua Penilai"], "asas": 7, "kategori": "pelaksana", "nota": "Pimpin satu sub-bidang" },
+    { "jawatan": "Urus Setia", "alias": ["Urusetia", "AJK Urusan"], "asas": 6, "kategori": "pelaksana", "nota": "Sokongan sekretariat" },
+    { "jawatan": "Pendakwa", "alias": [], "asas": 6, "kategori": "pelaksana", "nota": "Kendali kes disiplin; one-off tidak terpakai" },
+    { "jawatan": "Pencatat", "alias": [], "asas": 5, "kategori": "pelaksana", "nota": "Minit mesyuarat" },
+    { "jawatan": "Timbalan Pengerusi", "alias": ["Timb. Pengerusi", "Naib Pengerusi", "Pengerusi Silih Ganti"], "asas": 5, "kategori": "pengurusan", "nota": "Timbal balik" },
+    { "jawatan": "Timbalan Bendahari", "alias": ["Timb. Bendahari"], "asas": 5, "kategori": "pelaksana", "nota": "Sokong bendahari" },
+    { "jawatan": "Juru Audit Dalaman", "alias": ["Juruaudit Dalaman"], "asas": 4, "kategori": "pelaksana", "nota": "Berkala" },
+    { "jawatan": "Ahli", "alias": ["AJK", "JK"], "asas": 4, "kategori": "ahli", "nota": "Hadir mesyuarat & laksana tugasan" },
+    { "jawatan": "Wakil", "alias": ["Wakil Jabatan", "Wakil Staf", "Wakil Guru"], "asas": 3, "kategori": "ahli", "nota": "Mewakili kumpulan" },
+    { "jawatan": "Penasihat", "alias": [], "asas": 2, "kategori": "pengurusan", "nota": "Pengawasan/honorari; selalunya Pengetua" }
+  ],
+  "jawatan_kokurikulum": [
+    { "jawatan": "Ketua Guru Penasihat", "alias": ["Ketua Guru Asrama"], "asas": 8, "tempoh": "tahunan", "nota": "Kelab/Persatuan/Unit Beruniform/Sukan; perjumpaan mingguan" },
+    { "jawatan": "Guru Kelas", "alias": ["Penasihat Homeroom", "Guru Penasihat Homeroom"], "asas": 7, "tempoh": "tahunan", "nota": "Tanggungjawab pastoral harian" },
+    { "jawatan": "Guru Penasihat", "alias": ["Guru Penasihat Pembantu"], "asas": 5, "tempoh": "tahunan", "nota": "Pembantu penasihat" },
+    { "jawatan": "Pembimbing Rakan Sebaya", "alias": ["PRS"], "asas": 4, "tempoh": "tahunan", "nota": "" }
+  ],
+  "subtugas_one_off": [
+    { "jawatan": "Penyelaras Unit Khusus", "alias": ["Penyelaras Pendaftaran", "Penyelaras Logistik", "Penyelaras Teknikal", "Persiapan Tempat & Pentas"], "asas": 5, "nota": "Nilai 4-5 ikut berat unit" },
+    { "jawatan": "AJK Tugas Umum", "alias": ["Jamuan", "Kawalan Pelajar", "Peralatan", "Buku Program", "Seranta/Audiovisual"], "asas": 3, "nota": "" },
+    { "jawatan": "Pembantu Tadbir", "alias": ["Pembantu Tadbir HEP", "Pembantu Tadbir Kewangan", "Pembantu Tadbir Am", "Sokongan"], "asas": 2, "nota": "" }
+  ],
+  "contoh_pengiraan": [
+    { "kes": "Penyelaras JK tahunan", "kira": "10 * 1.0", "pemberat_akhir": 10.0 },
+    { "kes": "Penyelaras program one-off sederhana", "kira": "10 * 0.7 * 1.0", "pemberat_akhir": 7.0 },
+    { "kes": "Setiausaha program one-off besar (cth Kejohanan Olahraga)", "kira": "9 * 0.7 * 1.2", "pemberat_akhir": 7.56 },
+    { "kes": "AJK program one-off kecil (cth Hari Bumi)", "kira": "3 * 0.7 * 0.8", "pemberat_akhir": 1.68 }
+  ]
+}
