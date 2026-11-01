@@ -31,6 +31,7 @@ const S = {
   guruEdit: null,
   guruCari: "",
   guruUnit: "",
+  guruTapis: { gred: "", jawatan: "", peranan: "", jk: "", umur: "" },
   jkEdit: null,
   surat: {
     sesi: MAKLUMAT_SEKOLAH.sesi,
@@ -596,10 +597,26 @@ function viewGuru() {
   const ed = S.guruEdit ? S.guru.find((g) => g.id === S.guruEdit) : null;
   const bilLantikan = (id) => S.lantikan.filter((l) => l.guru_id === id).length;
   const senaraiUnit = [...new Set(S.guru.map((g) => g.unit).filter(Boolean))].sort();
+  const unik = (k) => [...new Set(S.guru.map((g) => g[k]).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b), "ms", { numeric: true }));
+  const senaraiGred = unik("gred");
+  const senaraiJawatan = unik("jawatan_hakiki");
+  const T = S.guruTapis;
+  const had = S.config?.tetapan?.had_umur_fizikal ?? 50;
   const cari = (S.guruCari || "").toLowerCase();
-  const senarai = S.guru.filter((g) =>
-    (!S.guruUnit || g.unit === S.guruUnit) &&
-    (!cari || [g.nama, g.no_gaji, g.jawatan_hakiki, g.gred, g.email].some((v) => String(v || "").toLowerCase().includes(cari))));
+  const senarai = S.guru.filter((g) => {
+    const bil = bilLantikan(g.id);
+    return (!S.guruUnit || g.unit === S.guruUnit) &&
+      (!T.gred || g.gred === T.gred) &&
+      (!T.jawatan || g.jawatan_hakiki === T.jawatan) &&
+      (!T.peranan || (T.peranan === "admin" ? g.peranan === "admin" : g.peranan !== "admin")) &&
+      (!T.jk || (T.jk === "0" ? bil === 0 : T.jk === "1-2" ? bil >= 1 && bil <= 2 : bil >= 3)) &&
+      (!T.umur || (typeof g.umur === "number" && (T.umur === "bawah" ? g.umur < had : g.umur >= had))) &&
+      (!cari || [g.nama, g.no_gaji, g.jawatan_hakiki, g.gred, g.email].some((v) => String(v || "").toLowerCase().includes(cari)));
+  });
+  const adaTapis = !!(S.guruCari || S.guruUnit || Object.values(T).some(Boolean));
+  const pilihan = (id, label, nilai, ops) => `<select id="${id}" class="${nilai ? "aktif" : ""}"><option value="">${label}</option>${ops
+    .map(([v, t]) => `<option value="${esc(v)}" ${nilai === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
 
   isi.innerHTML = `
   <div class="dua-lajur lebar-kiri">
@@ -608,9 +625,16 @@ function viewGuru() {
         <h3>Guru & staf (${senarai.length}${senarai.length !== S.guru.length ? ` daripada ${S.guru.length}` : ""})</h3>
         <div class="penapis">
           <input id="i-cari" type="search" placeholder="Cari nama, no. gaji, jawatan, gred…" value="${esc(S.guruCari || "")}">
-          <select id="s-unit"><option value="">Semua unit</option>${senaraiUnit
-            .map((u) => `<option ${S.guruUnit === u ? "selected" : ""}>${esc(u)}</option>`).join("")}</select>
         </div>
+      </div>
+      <div class="penapis tapis-guru">
+        ${pilihan("s-unit", "Semua unit", S.guruUnit, senaraiUnit.map((u) => [u, u]))}
+        ${pilihan("t-gred", "Semua gred", T.gred, senaraiGred.map((v) => [v, v]))}
+        ${pilihan("t-jawatan", "Semua jawatan", T.jawatan, senaraiJawatan.map((v) => [v, v]))}
+        ${pilihan("t-peranan", "Semua peranan", T.peranan, [["admin", "Admin"], ["guru", "Guru/Staf"]])}
+        ${pilihan("t-jk", "Semua bil. JK", T.jk, [["0", "Tiada JK"], ["1-2", "1–2 JK"], ["3+", "3 JK ke atas"]])}
+        ${pilihan("t-umur", "Semua umur", T.umur, [["bawah", `Bawah ${had} thn`], ["atas", `${had} thn ke atas`]])}
+        ${adaTapis ? '<button type="button" class="sekunder kecil" id="b-reset-tapis">Set semula</button>' : ""}
       </div>
       <table class="jadual">
         <thead><tr><th>Nama</th><th>Jawatan</th><th>Gred</th><th>No. Gaji</th><th>No. K/P</th><th>Umur</th><th>Peranan</th><th class="n">JK</th><th></th></tr></thead>
@@ -680,6 +704,20 @@ function viewGuru() {
   };
   $("#s-unit").onchange = (e) => {
     S.guruUnit = e.target.value;
+    viewGuru();
+  };
+  [["t-gred", "gred"], ["t-jawatan", "jawatan"], ["t-peranan", "peranan"], ["t-jk", "jk"], ["t-umur", "umur"]]
+    .forEach(([id, k]) => {
+      $("#" + id).onchange = (e) => {
+        S.guruTapis[k] = e.target.value;
+        viewGuru();
+      };
+    });
+  const bReset = $("#b-reset-tapis");
+  if (bReset) bReset.onclick = () => {
+    S.guruCari = "";
+    S.guruUnit = "";
+    S.guruTapis = { gred: "", jawatan: "", peranan: "", jk: "", umur: "" };
     viewGuru();
   };
 

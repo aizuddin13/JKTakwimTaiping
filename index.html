@@ -97,6 +97,10 @@
   .bar-alat select { width: auto; margin: 0; }
   .penapis { display: flex; gap: 8px; flex-wrap: wrap; }
   .penapis input { width: 240px; margin: 0; }
+  .tapis-guru { margin-bottom: 12px; align-items: center; }
+  .tapis-guru select { width: auto; max-width: 220px; margin: 0; }
+  .tapis-guru select.aktif { border-color: var(--utama, #1f5f5b); font-weight: 600; }
+  @media (max-width: 640px) { .penapis input { width: 100%; } .tapis-guru select { flex: 1 1 45%; max-width: none; } }
   .jadual td .sub { font-size: 11px; }
   .statistik { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
   .stat { background: #fff; border: 1px solid var(--garis); border-radius: var(--jejari); padding: 14px 16px; }
