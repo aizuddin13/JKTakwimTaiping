@@ -39,7 +39,6 @@ create trigger guru_pautkan_email
 revoke execute on function private.pautkan_auth_baru() from public;
 revoke execute on function private.pautkan_guru_email() from public;
 
--- Admin pertama
-insert into guru (nama, email, peranan)
-values ('Mohamad Khairul Aizuddin', 'khairulaizuddin13@gmail.com', 'admin')
-on conflict (email) do nothing;
+-- Admin pertama: tetapkan email log masuk admin (jalankan di SQL Editor Supabase).
+-- Gantikan EMAIL_ADMIN_ANDA dengan email yang mahu digunakan untuk log masuk.
+-- update guru set email = lower('EMAIL_ADMIN_ANDA') where id = 1 and peranan = 'admin';
