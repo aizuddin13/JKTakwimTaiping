@@ -109,13 +109,15 @@ async function cuba(fn, berjaya) {
 // ---------- Data ----------
 
 async function muatSemua() {
-  const [g, jk, jw, l, config] = await Promise.all([
+  const [g, jk, jw, l, config, kongsi] = await Promise.all([
     sb.from("guru").select("*").order("nama"),
     sb.from("jawatankuasa").select("*"),
     sb.from("jawatan").select("*").order("asas", { ascending: false }),
     sb.from("lantikan").select("*"),
     muatConfig(sb),
+    sb.from("tetapan").select("nilai").eq("kunci", "perkongsian_dibuka").maybeSingle(),
   ]);
+  S.perkongsianDibuka = semak(kongsi)?.nilai === true;
   S.guru = semak(g);
   S.jk = semak(jk).sort((a, b) => kodSort(a.kod, b.kod));
   S.jawatan = semak(jw);
@@ -327,7 +329,10 @@ function render() {
   app.innerHTML = `
   <header class="atas">
     <div class="jenama"><img src="assets/logo-mara.png" alt="MARA" class="logo-kepala"><img src="assets/logo-mrsm.png" alt="MRSM" class="logo-kepala"><div><strong>JK Takwim</strong><span class="sub">${esc(MAKLUMAT_SEKOLAH.nama)}</span></div></div>
-    <div class="pengguna"><span>${esc(S.saya.nama)}</span><span class="lencana">${admin ? "Admin" : "Guru"}</span>
+    <div class="pengguna">
+      <button id="b-kongsi" class="kongsi ${S.perkongsianDibuka ? "buka" : "tutup"}" title="Kawal sama ada guru boleh menyemak lantikan dengan No. Gaji">
+        <i></i>${S.perkongsianDibuka ? "Perkongsian: DIBUKA" : "Perkongsian: DITUTUP"}</button>
+      <span>${esc(S.saya.nama)}</span><span class="lencana">${admin ? "Admin" : "Guru"}</span>
       <button id="b-kata" class="sekunder kecil">Tukar kata laluan</button>
       <button id="b-keluar" class="sekunder kecil">Log keluar</button></div>
   </header>
@@ -339,6 +344,18 @@ function render() {
 
   $("#b-keluar").onclick = () => sb.auth.signOut();
   $("#b-kata").onclick = bukaTukarKataLaluan;
+  $("#b-kongsi").onclick = () => {
+    const buka = !S.perkongsianDibuka;
+    const soalan = buka
+      ? "Buka perkongsian? Semua guru akan dapat menyemak dan mencetak surat lantikan mereka dengan No. Gaji."
+      : "Tutup perkongsian? Guru tidak lagi dapat menyemak lantikan sehingga dibuka semula.";
+    if (!confirm(soalan)) return;
+    cuba(async () => {
+      semak(await sb.from("tetapan").upsert({ kunci: "perkongsian_dibuka", nilai: buka }));
+      S.perkongsianDibuka = buka;
+      render();
+    }, buka ? "Perkongsian dibuka. Guru kini boleh menyemak lantikan." : "Perkongsian ditutup.");
+  };
   app.querySelectorAll("[data-tab]").forEach((b) => {
     b.onclick = () => {
       S.tab = b.dataset.tab;
