@@ -22,7 +22,12 @@ export function semakKesesuaian(guru, config) {
   return amaran;
 }
 
+// Sekatan umur JK fizikal DIMATIKAN buat masa ini (admin tentukan sendiri).
+// Untuk hidupkan semula, tukar SEKAT_UMUR_FIZIKAL kepada true.
+const SEKAT_UMUR_FIZIKAL = false;
+
 function layakFizikal(guru, slot, had) {
+  if (!SEKAT_UMUR_FIZIKAL) return true;
   if (!slot.fizikal) return true;
   if (typeof guru.umur !== "number") return true; // tiada data umur -> tak sekat
   return guru.umur < had;

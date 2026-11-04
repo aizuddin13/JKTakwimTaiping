@@ -571,10 +571,9 @@ function viewLantikan() {
   const guruSusun = [...S.guruLengkap].sort((a, b) => a.beban - b.beban);
   const opsGuru = (senarai) => `<option value="">${senarai.length ? "Pilih guru…" : "Tiada padanan"}</option>${senarai
     .map((g) => {
-      const sekat = jk.fizikal && typeof g.umur === "number" && g.umur >= had;
       const sudah = idAhli.has(g.id);
       return `<option value="${g.id}">${esc(g.nama)}${catatanPengurusan(g) ? ` (${esc(catatanPengurusan(g))})` : ""}${g.gred ? ` · ${esc(g.gred)}` : ""} · beban ${nf(g.beban)}${g.umur ? ` · ${g.umur} thn` : ""}${
-        sudah ? " · sudah dalam JK ini" : ""}${sekat ? " · ⚠ melebihi had umur fizikal" : ""}</option>`;
+        sudah ? " · sudah dalam JK ini" : ""}</option>`;
     })
     .join("")}`;
   const padanGuru = (q) => {
@@ -614,7 +613,7 @@ function viewLantikan() {
           <button type="button" id="b-cadang" class="sekunder">Cadang guru</button>
           <button class="utama" type="submit">Lantik</button>
         </div>
-        <p class="nota" id="nota-cadang">Senarai guru disusun dari beban terendah. "Cadang guru" memilih guru dengan beban terendah yang belum dalam JK ini dan layak dari segi umur bagi JK fizikal.</p>
+        <p class="nota" id="nota-cadang">Senarai guru disusun dari beban terendah. "Cadang guru" memilih guru dengan beban terendah yang belum dalam JK ini.</p>
       </form>
     </section>
   </div>`;
@@ -655,7 +654,7 @@ function viewLantikan() {
     if (!calon.length) return toast("Semua guru sudah berada dalam JK ini.", "ralat");
     const slot = { jk: jk.nama, jawatan: jw.nama, tempoh: jk.tempoh, skala: jk.skala, fizikal: jk.fizikal };
     const hasil = agihSeimbang(calon, [slot], S.config, { kecualiPengurusan: S.kecualiPengurusan });
-    if (!hasil.agihan.length) return toast("Tiada guru layak (had umur bagi JK fizikal).", "ralat");
+    if (!hasil.agihan.length) return toast("Tiada guru layak untuk dicadangkan.", "ralat");
     if (![...form.guru.options].some((o) => o.value === hasil.agihan[0].guru)) {
       iCariGuru.value = "";
       tapisGuru();
