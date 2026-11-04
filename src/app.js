@@ -471,7 +471,6 @@ function viewBeban() {
   const maks = beban.length ? Math.max(...beban) : 0;
   const min = beban.length ? Math.min(...beban) : 0;
   const purata = beban.length ? beban.reduce((a, b) => a + b, 0) / beban.length : 0;
-  const amaran = senarai.flatMap((g) => g.amaran);
 
   isi.innerHTML = `
   <div class="bar-alat">
@@ -490,9 +489,6 @@ function viewBeban() {
   <div class="statistik">
     ${stat(labelBil, senarai.length)}${stat("Purata beban", nf(purata))}${stat("Tertinggi", nf(maks))}${stat("Terendah", nf(min))}${stat("Jurang", nf(maks - min))}
   </div>
-  ${amaran.length ? `<div class="amaran"><strong>${amaran.length} amaran umur / JK fizikal</strong><ul>${amaran
-    .map((a) => `<li>${esc(a.mesej)}</li>`)
-    .join("")}</ul></div>` : ""}
   <div class="kad">
     <div class="petunjuk"><span><i class="tinggi"></i>Melebihi 125% purata</span><span><i></i>Sekitar purata</span><span><i class="rendah"></i>Bawah 75% purata</span></div>
     <table class="jadual">
