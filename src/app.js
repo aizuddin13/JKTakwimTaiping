@@ -1166,6 +1166,13 @@ function cetak(html) {
 function viewSurat() {
   const isi = $("#isi");
   const ada = S.guruLengkap.filter((g) => g.lantikan.length);
+  const padanSurat = (teks) => {
+    const c = (teks || "").trim().toLowerCase();
+    return c ? ada.filter((g) => String(g.nama || "").toLowerCase().includes(c) || String(g.no_gaji || "").includes(c)) : ada;
+  };
+  const cariSurat = (S.suratCari || "").trim();
+  const padanan = padanSurat(cariSurat);
+  const dalamSenarai = cariSurat ? ada.filter((g) => padanan.includes(g) || String(g.id) === S.surat.guru) : ada;
   const pilihan = S.surat.guru === "semua" ? ada : ada.filter((g) => String(g.id) === S.surat.guru);
   const opsyen = { lindungKP: S.surat.lindungKP, paparPemberat: S.surat.paparPemberat };
   const pratonton = pilihan.length ? binaSurat(pilihan.slice(0, 1), opsyen) : "";
@@ -1175,9 +1182,11 @@ function viewSurat() {
     <section class="kad">
       <h3>Tetapan surat</h3>
       <form id="f-surat">
+        <label>Cari guru<input id="i-surat-cari" type="search" placeholder="Taip nama atau no. gaji…" autocomplete="off" value="${esc(S.suratCari || "")}"></label>
+        ${cariSurat ? `<p class="nota">${padanan.length ? `${padanan.length} padanan — pilih daripada senarai di bawah.` : "Tiada padanan."}</p>` : ""}
         <label>Guru<select name="guru">
           <option value="semua" ${S.surat.guru === "semua" ? "selected" : ""}>Semua guru yang ada lantikan (${ada.length})</option>
-          ${ada.map((g) => `<option value="${g.id}" ${S.surat.guru === String(g.id) ? "selected" : ""}>${esc(g.nama)} (${g.lantikan.length})</option>`).join("")}
+          ${dalamSenarai.map((g) => `<option value="${g.id}" ${S.surat.guru === String(g.id) ? "selected" : ""}>${esc(g.nama)} (${g.lantikan.length})</option>`).join("")}
         </select></label>
         <div class="grid-2">
           <label>Sesi<input name="sesi" value="${esc(S.surat.sesi)}"></label>
@@ -1200,6 +1209,21 @@ function viewSurat() {
   if (pratonton) $("#ifr").srcdoc = pratonton;
 
   const form = $("#f-surat");
+  const iCari = $("#i-surat-cari");
+  iCari.onchange = (e) => e.stopPropagation();
+  iCari.oninput = () => {
+    S.suratCari = iCari.value;
+    const jumpa = padanSurat(iCari.value);
+    // Terus pilih padanan pertama supaya pratonton dikemas kini semasa menaip
+    if (iCari.value.trim() && jumpa.length && !jumpa.some((g) => String(g.id) === S.surat.guru)) {
+      S.surat = { ...S.surat, guru: String(jumpa[0].id) };
+    }
+    const pos = iCari.selectionStart;
+    viewSurat();
+    const baru = $("#i-surat-cari");
+    baru.focus();
+    baru.setSelectionRange(pos, pos);
+  };
   form.onchange = () => {
     S.surat = {
       guru: form.guru.value,
