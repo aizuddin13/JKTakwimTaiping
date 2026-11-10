@@ -467,7 +467,7 @@ function viewBeban() {
     const j = julatUmur[S.bebanUmur];
     return (!S.bebanGred || g.gred === S.bebanGred) &&
       (!S.bebanUnit || (S.bebanUnit === "__tiada" ? !g.unit : g.unit === S.bebanUnit)) &&
-      (!cari || String(g.nama || "").toLowerCase().includes(cari)) &&
+      (!cari || [g.nama, g.jawatan_hakiki].some((v) => String(v || "").toLowerCase().includes(cari))) &&
       (!j || (typeof g.umur === "number" && g.umur >= j[0] && g.umur <= j[1]));
   }).sort((a, b) => b.beban - a.beban);
   const adaTapis = !!(S.bebanCari || S.bebanGred || S.bebanUmur || S.bebanUnit);
@@ -486,7 +486,7 @@ function viewBeban() {
       .map(([v, t, n]) => `<button type="button" data-kumpulan="${v}" class="${S.bebanKumpulan === v ? "aktif" : ""}">${t} <small>${n}</small></button>`)
       .join("")}</div>
     <div class="penapis">
-      <input id="i-beban-cari" type="search" placeholder="Cari nama…" value="${esc(S.bebanCari || "")}">
+      <input id="i-beban-cari" type="search" placeholder="Cari nama atau subjek…" value="${esc(S.bebanCari || "")}">
       <select id="s-beban-unit" class="${S.bebanUnit ? "aktif" : ""}"><option value="">Semua jabatan</option>${senaraiUnit
         .map((v) => `<option value="${esc(v)}" ${S.bebanUnit === v ? "selected" : ""}>${esc(v)}</option>`).join("")}${adaTanpaUnit
         ? `<option value="__tiada" ${S.bebanUnit === "__tiada" ? "selected" : ""}>(Tiada jabatan)</option>` : ""}</select>
@@ -507,7 +507,10 @@ function viewBeban() {
       <tbody>${senarai
         .map((g) => {
           const kelas = g.beban > purata * 1.25 ? "tinggi" : g.beban < purata * 0.75 ? "rendah" : "";
-          return `<tr><td>${esc(g.nama)}${catatanPengurusan(g) || g.unit ? `<span class="sub">${tagPengurusan(g)}${catatanPengurusan(g) && g.unit ? " " : ""}${esc(g.unit || "")}</span>` : ""}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
+          // Baris kedua: catatan pengurusan + jawatan/subjek (cth GURU FIZIK) + jabatan.
+          const butir = [g.jawatan_hakiki, g.unit].filter(Boolean).map(esc).join(" · ");
+          const sub = `${tagPengurusan(g)}${catatanPengurusan(g) && butir ? " " : ""}${butir}`;
+          return `<tr><td>${esc(g.nama)}${sub ? `<span class="sub">${sub}</span>` : ""}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
           <td class="n"><strong>${nf(g.beban)}</strong></td>
           <td><div class="palang"><span class="${kelas}" style="width:${maks ? (g.beban / maks) * 100 : 0}%"></span></div></td></tr>`;
         })
