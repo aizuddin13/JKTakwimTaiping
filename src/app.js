@@ -38,6 +38,7 @@ const S = {
   bebanCari: "",
   bebanUmur: "",
   bebanUnit: "",
+  bebanJawatan: "",
   guruTapis: { gred: "", jawatan: "", peranan: "", jk: "", umur: "" },
   jkEdit: null,
   surat: {
@@ -461,16 +462,20 @@ function viewBeban() {
     .sort((a, b) => String(a).localeCompare(String(b), "ms"));
   if (S.bebanUnit && S.bebanUnit !== "__tiada" && !senaraiUnit.includes(S.bebanUnit)) S.bebanUnit = "";
   const adaTanpaUnit = ikutKumpulan.some((g) => !g.unit);
+  const senaraiJawatan = [...new Set(ikutKumpulan.map((g) => g.jawatan_hakiki).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b), "ms"));
+  if (S.bebanJawatan && !senaraiJawatan.includes(S.bebanJawatan)) S.bebanJawatan = "";
   const cari = (S.bebanCari || "").trim().toLowerCase();
   const julatUmur = { "<30": [0, 29], "30-39": [30, 39], "40-49": [40, 49], "50+": [50, 999] };
   const senarai = ikutKumpulan.filter((g) => {
     const j = julatUmur[S.bebanUmur];
     return (!S.bebanGred || g.gred === S.bebanGred) &&
       (!S.bebanUnit || (S.bebanUnit === "__tiada" ? !g.unit : g.unit === S.bebanUnit)) &&
+      (!S.bebanJawatan || g.jawatan_hakiki === S.bebanJawatan) &&
       (!cari || [g.nama, g.jawatan_hakiki].some((v) => String(v || "").toLowerCase().includes(cari))) &&
       (!j || (typeof g.umur === "number" && g.umur >= j[0] && g.umur <= j[1]));
   }).sort((a, b) => b.beban - a.beban);
-  const adaTapis = !!(S.bebanCari || S.bebanGred || S.bebanUmur || S.bebanUnit);
+  const adaTapis = !!(S.bebanCari || S.bebanGred || S.bebanUmur || S.bebanUnit || S.bebanJawatan);
   const bilDG = S.guruLengkap.filter(isGuruDG).length;
   const kumpulan = [["", "Semua", S.guruLengkap.length], ["guru", "Guru (DG)", bilDG],
     ["sokongan", "Kakitangan sokongan", S.guruLengkap.length - bilDG]];
@@ -490,6 +495,8 @@ function viewBeban() {
       <select id="s-beban-unit" class="${S.bebanUnit ? "aktif" : ""}"><option value="">Semua jabatan</option>${senaraiUnit
         .map((v) => `<option value="${esc(v)}" ${S.bebanUnit === v ? "selected" : ""}>${esc(v)}</option>`).join("")}${adaTanpaUnit
         ? `<option value="__tiada" ${S.bebanUnit === "__tiada" ? "selected" : ""}>(Tiada jabatan)</option>` : ""}</select>
+      <select id="s-beban-jawatan" class="${S.bebanJawatan ? "aktif" : ""}"><option value="">Semua subjek</option>${senaraiJawatan
+        .map((v) => `<option value="${esc(v)}" ${S.bebanJawatan === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
       <select id="s-beban-gred" class="${S.bebanGred ? "aktif" : ""}"><option value="">Semua gred</option>${senaraiGred
         .map((v) => `<option value="${esc(v)}" ${S.bebanGred === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
       <select id="s-beban-umur" class="${S.bebanUmur ? "aktif" : ""}"><option value="">Semua umur</option>${[["<30", "Bawah 30 thn"], ["30-39", "30–39 thn"], ["40-49", "40–49 thn"], ["50+", "50 thn ke atas"]]
@@ -528,6 +535,10 @@ function viewBeban() {
     S.bebanUnit = e.target.value;
     viewBeban();
   };
+  $("#s-beban-jawatan").onchange = (e) => {
+    S.bebanJawatan = e.target.value;
+    viewBeban();
+  };
   $("#s-beban-gred").onchange = (e) => {
     S.bebanGred = e.target.value;
     viewBeban();
@@ -552,6 +563,7 @@ function viewBeban() {
     S.bebanGred = "";
     S.bebanUmur = "";
     S.bebanUnit = "";
+    S.bebanJawatan = "";
     viewBeban();
   };
 }
