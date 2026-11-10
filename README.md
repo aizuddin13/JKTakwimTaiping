@@ -6,7 +6,7 @@ App agihan tugas jawatankuasa sekolah — agih tugas guru merentas jawatankuasa 
 
 Laman: **https://aizuddin13.github.io/JKTakwimTaiping/**
 
-- **Guru**: tiada log masuk. Masukkan No. Gaji untuk melihat lantikan sendiri dan mencetak surat lantikan (No. K/P bertopeng, tanpa pemberat). Had 10 cubaan gagal / 15 minit.
+- **Guru**: tiada log masuk. Masukkan No. Gaji untuk melihat lantikan sendiri dan mencetak surat lantikan (No. K/P bertopeng, tanpa pemberat). Had 10 cubaan gagal / 15 minit / IP, dan had global 100 cubaan gagal / 5 minit.
 - **Admin**: log masuk dengan email + kata laluan. Akaun admin didaftarkan secara manual (lihat di bawah). Tab: Papan Beban, Lantikan (dengan cadangan guru beban terendah), Guru (termasuk import dari Excel), Jawatankuasa, Pemberat, Surat Lantikan.
 
 Backend: Supabase projek `jk-takwim-taiping`.
@@ -25,6 +25,8 @@ src/suratLantikan.js         Jana surat lantikan (HTML, topeng No. K/P)
 supabase/schema.sql          Migration 1–2: jadual + RLS + seed pemberat
 supabase/pautan_login.sql    Migration 3: pautan login ikut email
 supabase/semak_lantikan.sql  Migration 4: semakan guru ikut No. Gaji + had cubaan
+supabase/perkongsian.sql     Migration 6: suis perkongsian lantikan kepada guru
+supabase/had_semakan.sql     Migration 7: IP dipercayai + had global untuk semakan (JALANKAN di SQL Editor)
 supabase/seed_jawatankuasa.sql  96 jawatankuasa A1–E36
 contoh/                      Contoh output
 ```
@@ -45,6 +47,8 @@ Nilai asas pemberat (Penyelaras = 10 hingga Penasihat = 2) ditala dalam `data/pe
 - RLS: guru hanya nampak rekod & lantikan **sendiri**; admin urus semua.
 - No. K/P & No. Gaji dilindungi di peringkat pangkalan data.
 - Jawatankuasa & pemberat boleh ditambah/dibuang/dinamakan semula oleh admin.
+- Semakan No. Gaji (tanpa log masuk) dihadkan ikut IP yang dipercayai (`cf-connecting-ip` / elemen terakhir `x-forwarded-for`) dan had global — lihat `supabase/had_semakan.sql`.
+- Pustaka `supabase-js` dipin pada versi tepat di `src/app.js`; `index.html` menetapkan Content Security Policy (skrip hanya dari laman ini & esm.sh, sambungan hanya ke Supabase). Jika URL Supabase ditukar di `src/config.js`, kemas kini juga `connect-src` dalam `index.html`.
 
 ## Fungsi utama
 

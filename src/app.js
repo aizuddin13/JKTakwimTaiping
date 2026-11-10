@@ -2,7 +2,9 @@
 // Satu halaman: log masuk, papan beban, urus lantikan/guru/JK/pemberat, cetak surat.
 // Keselamatan data dikawal oleh RLS di Supabase: guru biasa hanya menerima data sendiri.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Versi dipin secara tepat (bukan "@2" terapung) supaya kemas kini pustaka dibuat dengan sengaja,
+// bukan secara automatik oleh CDN. Semak nota keluaran sebelum menaikkan versi.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { SUPABASE_URL, SUPABASE_KEY, MAKLUMAT_SEKOLAH, PENGURUSAN_TERTINGGI } from "./config.js";
 import { muatConfig } from "./supabaseData.js";
 import { kiraBebanGuru, kiraPemberat, binaIndeks } from "./pengiraanBeban.js";
