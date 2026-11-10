@@ -2,7 +2,9 @@
 // Satu halaman: log masuk, papan beban, urus lantikan/guru/JK/pemberat, cetak surat.
 // Keselamatan data dikawal oleh RLS di Supabase: guru biasa hanya menerima data sendiri.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Versi dipin secara tepat (bukan "@2" terapung) supaya kemas kini pustaka dibuat dengan sengaja,
+// bukan secara automatik oleh CDN. Semak nota keluaran sebelum menaikkan versi.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { SUPABASE_URL, SUPABASE_KEY, MAKLUMAT_SEKOLAH, PENGURUSAN_TERTINGGI } from "./config.js";
 import { muatConfig } from "./supabaseData.js";
 import { kiraBebanGuru, kiraPemberat, binaIndeks } from "./pengiraanBeban.js";
@@ -36,6 +38,7 @@ const S = {
   bebanCari: "",
   bebanUmur: "",
   bebanUnit: "",
+  bebanJawatan: "",
   guruTapis: { gred: "", jawatan: "", peranan: "", jk: "", umur: "" },
   jkEdit: null,
   surat: {
@@ -459,16 +462,20 @@ function viewBeban() {
     .sort((a, b) => String(a).localeCompare(String(b), "ms"));
   if (S.bebanUnit && S.bebanUnit !== "__tiada" && !senaraiUnit.includes(S.bebanUnit)) S.bebanUnit = "";
   const adaTanpaUnit = ikutKumpulan.some((g) => !g.unit);
+  const senaraiJawatan = [...new Set(ikutKumpulan.map((g) => g.jawatan_hakiki).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b), "ms"));
+  if (S.bebanJawatan && !senaraiJawatan.includes(S.bebanJawatan)) S.bebanJawatan = "";
   const cari = (S.bebanCari || "").trim().toLowerCase();
   const julatUmur = { "<30": [0, 29], "30-39": [30, 39], "40-49": [40, 49], "50+": [50, 999] };
   const senarai = ikutKumpulan.filter((g) => {
     const j = julatUmur[S.bebanUmur];
     return (!S.bebanGred || g.gred === S.bebanGred) &&
       (!S.bebanUnit || (S.bebanUnit === "__tiada" ? !g.unit : g.unit === S.bebanUnit)) &&
-      (!cari || String(g.nama || "").toLowerCase().includes(cari)) &&
+      (!S.bebanJawatan || g.jawatan_hakiki === S.bebanJawatan) &&
+      (!cari || [g.nama, g.jawatan_hakiki].some((v) => String(v || "").toLowerCase().includes(cari))) &&
       (!j || (typeof g.umur === "number" && g.umur >= j[0] && g.umur <= j[1]));
   }).sort((a, b) => b.beban - a.beban);
-  const adaTapis = !!(S.bebanCari || S.bebanGred || S.bebanUmur || S.bebanUnit);
+  const adaTapis = !!(S.bebanCari || S.bebanGred || S.bebanUmur || S.bebanUnit || S.bebanJawatan);
   const bilDG = S.guruLengkap.filter(isGuruDG).length;
   const kumpulan = [["", "Semua", S.guruLengkap.length], ["guru", "Guru (DG)", bilDG],
     ["sokongan", "Kakitangan sokongan", S.guruLengkap.length - bilDG]];
@@ -484,10 +491,12 @@ function viewBeban() {
       .map(([v, t, n]) => `<button type="button" data-kumpulan="${v}" class="${S.bebanKumpulan === v ? "aktif" : ""}">${t} <small>${n}</small></button>`)
       .join("")}</div>
     <div class="penapis">
-      <input id="i-beban-cari" type="search" placeholder="Cari nama…" value="${esc(S.bebanCari || "")}">
+      <input id="i-beban-cari" type="search" placeholder="Cari nama atau subjek…" value="${esc(S.bebanCari || "")}">
       <select id="s-beban-unit" class="${S.bebanUnit ? "aktif" : ""}"><option value="">Semua jabatan</option>${senaraiUnit
         .map((v) => `<option value="${esc(v)}" ${S.bebanUnit === v ? "selected" : ""}>${esc(v)}</option>`).join("")}${adaTanpaUnit
         ? `<option value="__tiada" ${S.bebanUnit === "__tiada" ? "selected" : ""}>(Tiada jabatan)</option>` : ""}</select>
+      <select id="s-beban-jawatan" class="${S.bebanJawatan ? "aktif" : ""}"><option value="">Semua subjek</option>${senaraiJawatan
+        .map((v) => `<option value="${esc(v)}" ${S.bebanJawatan === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
       <select id="s-beban-gred" class="${S.bebanGred ? "aktif" : ""}"><option value="">Semua gred</option>${senaraiGred
         .map((v) => `<option value="${esc(v)}" ${S.bebanGred === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
       <select id="s-beban-umur" class="${S.bebanUmur ? "aktif" : ""}"><option value="">Semua umur</option>${[["<30", "Bawah 30 thn"], ["30-39", "30–39 thn"], ["40-49", "40–49 thn"], ["50+", "50 thn ke atas"]]
@@ -505,7 +514,10 @@ function viewBeban() {
       <tbody>${senarai
         .map((g) => {
           const kelas = g.beban > purata * 1.25 ? "tinggi" : g.beban < purata * 0.75 ? "rendah" : "";
-          return `<tr><td>${esc(g.nama)}${catatanPengurusan(g) || g.unit ? `<span class="sub">${tagPengurusan(g)}${catatanPengurusan(g) && g.unit ? " " : ""}${esc(g.unit || "")}</span>` : ""}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
+          // Baris kedua: catatan pengurusan + jawatan/subjek (cth GURU FIZIK) + jabatan.
+          const butir = [g.jawatan_hakiki, g.unit].filter(Boolean).map(esc).join(" · ");
+          const sub = `${tagPengurusan(g)}${catatanPengurusan(g) && butir ? " " : ""}${butir}`;
+          return `<tr><td>${esc(g.nama)}${sub ? `<span class="sub">${sub}</span>` : ""}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
           <td class="n"><strong>${nf(g.beban)}</strong></td>
           <td><div class="palang"><span class="${kelas}" style="width:${maks ? (g.beban / maks) * 100 : 0}%"></span></div></td></tr>`;
         })
@@ -521,6 +533,10 @@ function viewBeban() {
   });
   $("#s-beban-unit").onchange = (e) => {
     S.bebanUnit = e.target.value;
+    viewBeban();
+  };
+  $("#s-beban-jawatan").onchange = (e) => {
+    S.bebanJawatan = e.target.value;
     viewBeban();
   };
   $("#s-beban-gred").onchange = (e) => {
@@ -547,6 +563,7 @@ function viewBeban() {
     S.bebanGred = "";
     S.bebanUmur = "";
     S.bebanUnit = "";
+    S.bebanJawatan = "";
     viewBeban();
   };
 }
