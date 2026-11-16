@@ -114,7 +114,7 @@ export function suratHTML(data, { lindungKP = false, paparPemberat = true } = {}
 <html lang="ms"><head><meta charset="utf-8">
 <title>${escapeHtml(data.tajuk)} — ${escapeHtml(data.guru.nama)}</title>
 <style>
-  @page{size:Letter;margin:18mm 20mm 14mm 20mm}
+  @page{size:Letter;margin:16mm 20mm 12mm 20mm}
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;line-height:1.3;background:#fff}
@@ -148,16 +148,17 @@ export function suratHTML(data, { lindungKP = false, paparPemberat = true } = {}
   table.lantikan .r{text-align:right}
   table.lantikan .kod{font-weight:bold}
 
-  .cogan{margin:10pt 0 10pt;font-weight:bold}
+  .cogan{margin:8pt 0 8pt;font-weight:bold}
   .cogan div{margin:0}
   .ttd{margin-top:8pt}
-  .ttd .ruang{height:36pt}
+  .ttd .ruang{height:24pt}
   .ttd .nama{font-weight:bold;text-transform:uppercase}
   .ttd div{line-height:1.3}
-  .kaki{text-align:center;margin-top:12pt}
-  .kaki img{width:20mm;height:20mm;display:block;margin:0 auto 1pt}
+  .kaki{text-align:center;margin-top:8pt}
+  .kaki img{width:18mm;height:18mm;display:block;margin:0 auto 1pt}
   .kaki .amanah{font-size:11pt}
-  .nota{font-size:8.5pt;color:#444;margin:6pt 0 0}
+  .janaan{font-style:italic;font-size:9.5pt;margin:8pt 0 0}
+  .nota{font-size:8.5pt;color:#444;margin:4pt 0 0}
 </style></head><body>
 <div class="surat">
   <div class="kepala"><span class="mara">mara</span><span class="memograf">memograf</span></div>
@@ -201,6 +202,7 @@ export function suratHTML(data, { lindungKP = false, paparPemberat = true } = {}
     <div>${escapeHtml(data.sekolah)}</div>
     <div>${escapeHtml(data.negeri)}</div>
   </div>
+  <p class="janaan">Surat ini adalah cetakan komputer dan tidak memerlukan tandatangan.</p>
   <p class="nota">Nama: ${escapeHtml(data.guru.nama)} &nbsp;|&nbsp; No. K/P: ${escapeHtml(kp || "-")} &nbsp;|&nbsp; No. Gaji: ${escapeHtml(data.guru.no_gaji || "-")}</p>
 
   <div class="kaki">
