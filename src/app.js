@@ -9,7 +9,7 @@ import { SUPABASE_URL, SUPABASE_KEY, MAKLUMAT_SEKOLAH, PENGURUSAN_TERTINGGI } fr
 import { muatConfig } from "./supabaseData.js";
 import { kiraBebanGuru, kiraPemberat, binaIndeks } from "./pengiraanBeban.js";
 import { agihSeimbang, semakKesesuaian } from "./penyeimbang.js";
-import { dataSurat, suratHTML } from "./suratLantikan.js";
+import { dataSurat, suratHTML, tarikhHijrah } from "./suratLantikan.js";
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 const app = document.getElementById("app");
@@ -44,7 +44,12 @@ const S = {
   surat: {
     sesi: MAKLUMAT_SEKOLAH.sesi,
     tarikh: new Date().toISOString().slice(0, 10),
+    tarikhHijrah: "",                          // kosong = kira automatik daripada tarikh
+    rujukan: MAKLUMAT_SEKOLAH.rujukan,
+    salinan: "",
     penandatangan: MAKLUMAT_SEKOLAH.penandatangan,
+    jawatanPenandatangan: MAKLUMAT_SEKOLAH.jawatanPenandatangan,
+    bagiPihak: MAKLUMAT_SEKOLAH.bagiPihak,
     lindungKP: false,
     paparPemberat: false,
     guru: "semua",
@@ -1159,11 +1164,15 @@ function gabungSurat(halaman) {
 function binaSurat(senaraiGuru, opsyen, config = S.config) {
   const maklumat = {
     nama: MAKLUMAT_SEKOLAH.nama,
+    negeri: MAKLUMAT_SEKOLAH.negeri,
     sesi: S.surat.sesi,
-    tarikh: S.surat.tarikh
-      ? new Date(`${S.surat.tarikh}T00:00:00`).toLocaleDateString("ms-MY", { day: "numeric", month: "long", year: "numeric" })
-      : "",
+    tarikh: S.surat.tarikh || new Date().toISOString().slice(0, 10),
+    tarikhHijrah: (S.surat.tarikhHijrah || "").trim(),
+    rujukan: S.surat.rujukan,
+    salinan: S.surat.salinan,
     penandatangan: S.surat.penandatangan,
+    jawatanPenandatangan: S.surat.jawatanPenandatangan,
+    bagiPihak: S.surat.bagiPihak,
   };
   return gabungSurat(senaraiGuru.map((g) => suratHTML(dataSurat(g, config, maklumat), opsyen)));
 }
@@ -1209,7 +1218,17 @@ function viewSurat() {
           <label>Sesi<input name="sesi" value="${esc(S.surat.sesi)}"></label>
           <label>Tarikh<input name="tarikh" type="date" value="${esc(S.surat.tarikh)}"></label>
         </div>
-        <label>Penandatangan<input name="penandatangan" value="${esc(S.surat.penandatangan)}"></label>
+        <div class="grid-2">
+          <label>Tarikh Hijrah<input name="tarikhHijrah" value="${esc(S.surat.tarikhHijrah)}" placeholder="${esc(tarikhHijrah(S.surat.tarikh))}"></label>
+          <label>Rujuk Kami<input name="rujukan" value="${esc(S.surat.rujukan)}"></label>
+        </div>
+        <p class="nota">Tarikh Hijrah dikira automatik (±1 hari); taip untuk menimpa.</p>
+        <label>Salinan kepada<input name="salinan" value="${esc(S.surat.salinan)}" placeholder="(kosong jika tiada)"></label>
+        <label>Penandatangan (nama)<input name="penandatangan" value="${esc(S.surat.penandatangan)}"></label>
+        <div class="grid-2">
+          <label>Jawatan penandatangan<input name="jawatanPenandatangan" value="${esc(S.surat.jawatanPenandatangan)}"></label>
+          <label>b.p. (bagi pihak)<input name="bagiPihak" value="${esc(S.surat.bagiPihak)}" placeholder="cth. Pengetua"></label>
+        </div>
         <label class="semak"><input type="checkbox" name="paparPemberat" ${S.surat.paparPemberat ? "checked" : ""}> Papar lajur pemberat & jumlah beban</label>
         <label class="semak"><input type="checkbox" name="lindungKP" ${S.surat.lindungKP ? "checked" : ""}> Tutup separa No. K/P</label>
         <div class="baris-butang"><button class="utama" type="button" id="b-cetak" ${pilihan.length ? "" : "disabled"}>
@@ -1246,7 +1265,12 @@ function viewSurat() {
       guru: form.guru.value,
       sesi: form.sesi.value,
       tarikh: form.tarikh.value,
+      tarikhHijrah: form.tarikhHijrah.value,
+      rujukan: form.rujukan.value,
+      salinan: form.salinan.value,
       penandatangan: form.penandatangan.value,
+      jawatanPenandatangan: form.jawatanPenandatangan.value,
+      bagiPihak: form.bagiPihak.value,
       paparPemberat: form.paparPemberat.checked,
       lindungKP: form.lindungKP.checked,
     };

@@ -21,7 +21,7 @@ data/pemberat_jawatan.json   Config pemberat (sumber tunggal nilai)
 src/pengiraanBeban.js        Kira pemberat jawatan & jumlah beban guru
 src/penyeimbang.js           Auto-balance slot kosong + kekangan umur/fizikal
 src/supabaseData.js          Jambatan data Supabase -> fungsi pengiraan
-src/suratLantikan.js         Jana surat lantikan (HTML, topeng No. K/P)
+src/suratLantikan.js         Jana surat lantikan format memograf MARA (HTML, topeng No. K/P, tarikh Hijrah)
 supabase/schema.sql          Migration 1–2: jadual + RLS + seed pemberat
 supabase/pautan_login.sql    Migration 3: pautan login ikut email
 supabase/semak_lantikan.sql  Migration 4: semakan guru ikut No. Gaji + had cubaan
@@ -30,6 +30,19 @@ supabase/had_semakan.sql     Migration 7: IP dipercayai + had global untuk semak
 supabase/seed_jawatankuasa.sql  96 jawatankuasa A1–E36
 contoh/                      Contoh output
 ```
+
+## Surat lantikan (format memograf MARA)
+
+Surat dijana mengikut format memograf rasmi MARA: kepala **mara memograf**, jadual rujukan
+(Kepada / Daripada / Salinan Kepada / Bilangan / Rujuk Kami / Tarikh / Rujuk Tuan), tajuk huruf besar,
+pembukaan "Dengan segala hormatnya perkara di atas adalah dirujuk.", jadual lantikan, "Sekian.",
+cogan kata (MALAYSIA MADANI / BERKHIDMAT UNTUK NEGARA / LUAR BANDAR SEJAHTERA),
+"Saya yang menjalankan amanah," + nama & jawatan penandatangan, dan kaki logo MARA 60 tahun "Amanah Rakyat".
+
+- Nilai lalai (nama sekolah, negeri, Rujuk Kami, nama & jawatan penandatangan) di `src/config.js` (`MAKLUMAT_SEKOLAH`).
+- Dalam tab **Surat Lantikan** admin boleh mengubah sesi, tarikh, tarikh Hijrah (dikira automatik ±1 hari, boleh ditimpa),
+  Rujuk Kami, salinan kepada, penandatangan, jawatan, dan "b.p." (bagi pihak).
+- Surat yang dicetak guru sendiri (tanpa log masuk) menggunakan nilai lalai dan tidak memaparkan pemberat.
 
 ## Formula pemberat
 
