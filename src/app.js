@@ -51,7 +51,6 @@ const S = {
     jawatanPenandatangan: MAKLUMAT_SEKOLAH.jawatanPenandatangan,
     bagiPihak: MAKLUMAT_SEKOLAH.bagiPihak,
     lindungKP: false,
-    paparPemberat: false,
     guru: "semua",
   },
 };
@@ -200,7 +199,7 @@ async function laluan() {
 }
 
 // Config minimum untuk surat yang dicetak oleh guru (tanpa log masuk):
-// guru tidak mempunyai akses kepada jadual pemberat, dan surat guru tidak memaparkan pemberat.
+// guru tidak mempunyai akses kepada jadual pemberat (surat tidak memaparkan pemberat).
 const LOGO_ATAS = `<div class="logo-atas">
   <img src="assets/logo-mara.png" alt="Logo MARA" width="66" height="80">
   <img src="assets/logo-mrsm.png" alt="Logo MRSM" width="96" height="80">
@@ -303,7 +302,7 @@ function paparHasilGuru(d) {
   $("#b-cetak").onclick = () =>
     cetak(binaSurat(
       [{ nama: d.nama, no_kp: d.no_kp, no_gaji: d.no_gaji, lantikan }],
-      { lindungKP: false, paparPemberat: false },
+      { lindungKP: false },
       CONFIG_SURAT_GURU
     ));
 }
@@ -1200,7 +1199,7 @@ function viewSurat() {
   const padanan = padanSurat(cariSurat);
   const dalamSenarai = cariSurat ? ada.filter((g) => padanan.includes(g) || String(g.id) === S.surat.guru) : ada;
   const pilihan = S.surat.guru === "semua" ? ada : ada.filter((g) => String(g.id) === S.surat.guru);
-  const opsyen = { lindungKP: S.surat.lindungKP, paparPemberat: S.surat.paparPemberat };
+  const opsyen = { lindungKP: S.surat.lindungKP };
   const pratonton = pilihan.length ? binaSurat(pilihan.slice(0, 1), opsyen) : "";
 
   isi.innerHTML = `
@@ -1229,7 +1228,6 @@ function viewSurat() {
           <label>Jawatan penandatangan<input name="jawatanPenandatangan" value="${esc(S.surat.jawatanPenandatangan)}"></label>
           <label>b.p. (bagi pihak)<input name="bagiPihak" value="${esc(S.surat.bagiPihak)}" placeholder="cth. Pengetua"></label>
         </div>
-        <label class="semak"><input type="checkbox" name="paparPemberat" ${S.surat.paparPemberat ? "checked" : ""}> Papar lajur pemberat & jumlah beban</label>
         <label class="semak"><input type="checkbox" name="lindungKP" ${S.surat.lindungKP ? "checked" : ""}> Tutup separa No. K/P</label>
         <div class="baris-butang"><button class="utama" type="button" id="b-cetak" ${pilihan.length ? "" : "disabled"}>
           Cetak ${pilihan.length > 1 ? `${pilihan.length} surat` : "surat"}</button></div>
@@ -1271,7 +1269,6 @@ function viewSurat() {
       penandatangan: form.penandatangan.value,
       jawatanPenandatangan: form.jawatanPenandatangan.value,
       bagiPihak: form.bagiPihak.value,
-      paparPemberat: form.paparPemberat.checked,
       lindungKP: form.lindungKP.checked,
     };
     viewSurat();

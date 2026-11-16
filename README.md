@@ -42,7 +42,8 @@ cogan kata (MALAYSIA MADANI / BERKHIDMAT UNTUK NEGARA / LUAR BANDAR SEJAHTERA),
 - Nilai lalai (nama sekolah, negeri, Rujuk Kami, nama & jawatan penandatangan) di `src/config.js` (`MAKLUMAT_SEKOLAH`).
 - Dalam tab **Surat Lantikan** admin boleh mengubah sesi, tarikh, tarikh Hijrah (dikira automatik ±1 hari, boleh ditimpa),
   Rujuk Kami, salinan kepada, penandatangan, jawatan, dan "b.p." (bagi pihak).
-- Surat yang dicetak guru sendiri (tanpa log masuk) menggunakan nilai lalai dan tidak memaparkan pemberat.
+- Jadual dalam surat hanya memaparkan Bil., Jawatankuasa/Program dan Jawatan — nilai pemberat tidak dicetak.
+- Surat yang dicetak guru sendiri (tanpa log masuk) menggunakan nilai lalai.
 
 ## Formula pemberat
 

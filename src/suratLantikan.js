@@ -89,7 +89,8 @@ export function dataSurat(guru, config, maklumatSekolah = {}) {
 }
 
 // Render HTML sedia cetak mengikut format memograf. Elak kebocoran: no. K/P boleh ditutup separa.
-export function suratHTML(data, { lindungKP = false, paparPemberat = true } = {}) {
+// Surat hanya memaparkan Bil., Jawatankuasa/Program dan Jawatan — nilai pemberat tidak pernah dipaparkan.
+export function suratHTML(data, { lindungKP = false } = {}) {
   const kp = lindungKP && data.guru.no_kp
     ? data.guru.no_kp.replace(/\d(?=\d{4})/g, "*")
     : data.guru.no_kp;
@@ -99,13 +100,7 @@ export function suratHTML(data, { lindungKP = false, paparPemberat = true } = {}
         <td class="t">${l.bil}.</td>
         <td>${l.kod ? `<span class="kod">${escapeHtml(l.kod)}</span> ` : ""}${escapeHtml(l.jk)}</td>
         <td>${escapeHtml(l.jawatan)}</td>
-        ${paparPemberat ? `<td class="t">${l.pemberat}</td>` : ""}
       </tr>`).join("");
-
-  const kepalaPemberat = paparPemberat ? `<th class="t" style="width:60px">Pemberat</th>` : "";
-  const kaki = paparPemberat
-    ? `<tfoot><tr><td colspan="3" class="r"><strong>Jumlah Beban</strong></td><td class="t"><strong>${data.jumlahBeban}</strong></td></tr></tfoot>`
-    : "";
 
   const sesi = data.sesi ? ` bagi Sesi ${escapeHtml(data.sesi)}` : "";
   const bil = data.lantikan.length;
@@ -145,7 +140,6 @@ export function suratHTML(data, { lindungKP = false, paparPemberat = true } = {}
   table.lantikan th,table.lantikan td{border:.75pt solid #000;padding:3pt 6pt;vertical-align:top}
   table.lantikan th{background:#eaeaea;text-align:left;font-weight:bold}
   table.lantikan .t{text-align:center}
-  table.lantikan .r{text-align:right}
   table.lantikan .kod{font-weight:bold}
 
   .cogan{margin:8pt 0 8pt;font-weight:bold}
@@ -180,9 +174,8 @@ export function suratHTML(data, { lindungKP = false, paparPemberat = true } = {}
   <p>Dengan segala hormatnya perkara di atas adalah dirujuk.</p>
   <p>Sukacita dimaklumkan bahawa tuan/puan telah dilantik untuk memegang jawatan dalam ${bil === 1 ? "jawatankuasa" : `${bil} jawatankuasa`} berikut${sesi}:</p>
   <table class="lantikan">
-    <thead><tr><th class="t" style="width:32px">Bil.</th><th>Jawatankuasa / Program</th><th style="width:30%">Jawatan</th>${kepalaPemberat}</tr></thead>
+    <thead><tr><th class="t" style="width:32px">Bil.</th><th>Jawatankuasa / Program</th><th style="width:30%">Jawatan</th></tr></thead>
     <tbody>${baris}</tbody>
-    ${kaki}
   </table>
   <p>Segala kerjasama dan perhatian daripada pihak tuan/puan dalam menjayakan tanggungjawab ini amatlah dihargai dan didahului dengan ucapan terima kasih.</p>
   <p>Sekian.</p>
