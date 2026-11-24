@@ -68,7 +68,9 @@ function jarak(p, q) {
   return p.tamat < q.mula ? q.mula - p.tamat : p.mula - q.tamat;
 }
 
-// lantikan : [{ kod, jk, jawatan, tarikh }]  (lantikan aktif seorang guru)
+// lantikan : [{ kod, jk, jawatan, tarikh, kumpulan? }]  (lantikan aktif seorang guru)
+//            kumpulan = jawatankuasa.kumpulan_tarikh: program dalam kumpulan sama memang dirancang
+//            serentak (jawatankuasa dikongsi) dan tidak disemak antara satu sama lain.
 // hariMin  : jarak minimum (hari) antara dua program sebelum diberi amaran
 // Pulangkan [{ a, b, jenis: "bertindan"|"dekat", jarak, mesej }]
 export function semakTarikh(lantikan, hariMin = 7) {
@@ -84,6 +86,7 @@ export function semakTarikh(lantikan, hariMin = 7) {
   for (let i = 0; i < senarai.length; i++) {
     for (let j = i + 1; j < senarai.length; j++) {
       const a = senarai[i], b = senarai[j];
+      if (a.kumpulan && a.kumpulan === b.kumpulan) continue;
       let terdekat = Infinity;
       for (const p of a.julat) for (const q of b.julat) terdekat = Math.min(terdekat, jarak(p, q));
       if (terdekat === 0 || terdekat < hariMin) {
