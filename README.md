@@ -21,6 +21,7 @@ data/pemberat_jawatan.json   Config pemberat (sumber tunggal nilai)
 src/pengiraanBeban.js        Kira pemberat jawatan & jumlah beban guru
 src/penyeimbang.js           Auto-balance slot kosong + kekangan umur/fizikal
 src/supabaseData.js          Jambatan data Supabase -> fungsi pengiraan
+src/tarikhProgram.js         Tarikh program + semakan tarikh bertindan / terlalu rapat bagi seorang guru
 src/suratLantikan.js         Jana surat lantikan format memograf MARA (HTML, topeng No. K/P, tarikh Hijrah)
 supabase/schema.sql          Migration 1–2: jadual + RLS + seed pemberat
 supabase/pautan_login.sql    Migration 3: pautan login ikut email
@@ -28,6 +29,7 @@ supabase/semak_lantikan.sql  Migration 4: semakan guru ikut No. Gaji + had cubaa
 supabase/perkongsian.sql     Migration 6: suis perkongsian lantikan kepada guru
 supabase/had_semakan.sql     Migration 7: IP dipercayai + had global untuk semakan (JALANKAN di SQL Editor)
 supabase/jawatankuasa_2027.sql  Migration 8: selaraskan jawatankuasa dengan memo Sesi 2027
+supabase/intensiti_tarikh.sql   Migration 9: intensiti JK ikut KPI + tarikh program (amaran tarikh bertindan)
 supabase/seed_jawatankuasa.sql  97 jawatankuasa Sesi 2027 (A1–A20, B1–B14, C1–C13, D1–D11, E1–E39)
 contoh/                      Contoh output
 ```
@@ -51,7 +53,8 @@ cogan kata (MALAYSIA MADANI / BERKHIDMAT UNTUK NEGARA / LUAR BANDAR SEJAHTERA),
 ```
 pemberat_akhir = asas_jawatan × faktor_tempoh × faktor_skala
 faktor_tempoh : tahunan = 1.0 , one-off = 0.7
-faktor_skala  : besar = 1.2 , sederhana = 1.0 , kecil = 0.8   (one-off sahaja)
+faktor_skala  : besar = 1.2 , sederhana = 1.0 , kecil = 0.8
+                one-off = saiz program; tahunan = intensiti kerja JK (ikut KPI memo 2027)
 beban_guru    = Σ semua pemberat jawatan guru
 ```
 
@@ -65,6 +68,14 @@ Nilai asas pemberat (Penyelaras = 10 hingga Penasihat = 2) ditala dalam `data/pe
 - Semakan No. Gaji (tanpa log masuk) dihadkan ikut IP yang dipercayai (`cf-connecting-ip` / elemen terakhir `x-forwarded-for`) dan had global — lihat `supabase/had_semakan.sql`.
 - Pustaka `supabase-js` dipin pada versi tepat di `src/app.js`; `index.html` menetapkan Content Security Policy (skrip hanya dari laman ini & esm.sh, sambungan hanya ke Supabase). Jika URL Supabase ditukar di `src/config.js`, kemas kini juga `connect-src` dalam `index.html`.
 
+## Intensiti beban & amaran tarikh
+
+- **Intensiti (KPI):** skala JK tahunan A–D ditetapkan ikut kekerapan & skop KPI dalam memo 2027
+  (cth mesyuarat bulanan / pemeriksaan mingguan = besar; 1–4 kali setahun = kecil). KPI teks kekal dalam memo.
+- **Tarikh program:** lajur `tarikh` (cth `11/1/2027 - 15/1/2027; 16/3/2027`) dan `tarikh_nota` (cth "Kalendar PG").
+  Guru yang dilantik dalam dua program bertindan atau jaraknya kurang daripada `jarak_minimum_hari` (lalai 7, tab Pemberat)
+  ditanda ⚠ di Papan Beban & Lantikan; "Cadang guru" mengelakkan guru sebegini.
+
 ## Fungsi utama
 
 | Fungsi | Fail | Guna |
@@ -74,6 +85,7 @@ Nilai asas pemberat (Penyelaras = 10 hingga Penasihat = 2) ditala dalam `data/pe
 | `semakKesesuaian` | penyeimbang.js | Amaran JK fizikal vs umur |
 | `muatDanKira` | supabaseData.js | Muat data Supabase + kira |
 | `suratHTML` | suratLantikan.js | Jana surat lantikan |
+| `semakTarikh` | tarikhProgram.js | Amaran program bertindan / terlalu rapat |
 
 ## Daftar akaun admin (manual)
 

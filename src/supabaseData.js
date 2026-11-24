@@ -28,7 +28,10 @@ export async function muatConfig(supabase) {
   return {
     faktor_tempoh: t.faktor_tempoh || { tahunan: 1.0, one_off: 0.7 },
     faktor_skala: t.faktor_skala || { besar: 1.2, sederhana: 1.0, kecil: 0.8 },
-    tetapan: { had_umur_fizikal: Number(t.had_umur_fizikal ?? 50) },
+    tetapan: {
+      had_umur_fizikal: Number(t.had_umur_fizikal ?? 50),
+      jarak_minimum_hari: Number(t.jarak_minimum_hari ?? 7),
+    },
     // semua rekod dimasukkan ke satu senarai; binaIndeks() tetap jumpa
     jawatan_utama: rekod,
     jawatan_kokurikulum: [],

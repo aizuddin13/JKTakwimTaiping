@@ -1,11 +1,11 @@
 {
   "meta": {
     "nama": "Pemberat Agihan Tugas Jawatankuasa",
-    "sumber": "MEMO Senarai Jawatankuasa MRSM Taiping 2025/2026",
+    "sumber": "MEMO Senarai Jawatankuasa MRSM Taiping 2025/2026; intensiti ikut KPI memo Sesi 2027",
     "versi": "1.0",
     "skala": "1-10 (berlabuh pada Penyelaras = 10 tahunan)",
     "formula": "pemberat_akhir = asas_jawatan * faktor_tempoh * faktor_skala",
-    "catatan": "faktor_skala hanya dikenakan untuk program one-off"
+    "catatan": "faktor_skala dikenakan pada semua JK: saiz program (one-off) atau intensiti kerja JK tahunan (ikut KPI memo 2027)"
   },
   "faktor_tempoh": {
     "tahunan": 1.0,

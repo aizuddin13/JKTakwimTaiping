@@ -10,6 +10,7 @@ import { muatConfig } from "./supabaseData.js";
 import { kiraBebanGuru, kiraPemberat, binaIndeks } from "./pengiraanBeban.js";
 import { agihSeimbang, semakKesesuaian } from "./penyeimbang.js";
 import { dataSurat, suratHTML, tarikhHijrah } from "./suratLantikan.js";
+import { parseTarikh, formatTarikh, semakTarikh } from "./tarikhProgram.js";
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 const app = document.getElementById("app");
@@ -136,6 +137,30 @@ async function muatSemua() {
   kiraSemula();
 }
 
+const hariMin = () => S.config?.tetapan?.jarak_minimum_hari ?? 7;
+
+// Jawatan pengurusan (Penasihat/Pengerusi/TP) mengikut jawatan hakiki dan hadir hampir semua program —
+// dikecualikan daripada semakan tarikh apabila "kecualikan pengurusan" aktif (sama seperti pengiraan beban).
+const lantikanUntukTarikh = (lantikan) =>
+  S.kecualiPengurusan ? lantikan.filter((l) => l.kategoriJawatan !== "pengurusan") : lantikan;
+
+// Amaran tarikh jika guru g dilantik ke JK jk dengan jawatan jw (hanya yang melibatkan jk).
+function amaranTarikhJika(g, jk, jw = null) {
+  if (!g || !jk?.tarikh) return [];
+  if (S.kecualiPengurusan && jw?.kategori === "pengurusan") return [];
+  const sedia = lantikanUntukTarikh(g.lantikan).filter((l) => l.kod !== jk.kod);
+  return semakTarikh([...sedia, { kod: jk.kod, jk: jk.nama, tarikh: jk.tarikh }], hariMin())
+    .filter((a) => a.a.kod === jk.kod || a.b.kod === jk.kod);
+}
+
+const teksTarikh = (jk) => [jk?.tarikh ? formatTarikh(jk.tarikh) : "", jk?.tarikh_nota || ""].filter(Boolean).join(" · ");
+
+function tagTarikh(senarai) {
+  if (!senarai?.length) return "";
+  const bertindan = senarai.some((a) => a.jenis === "bertindan");
+  return `<span class="tag amaran-tarikh" title="${esc(senarai.map((a) => a.mesej).join("\n"))}">⚠ ${senarai.length} tarikh ${bertindan ? "bertindan" : "rapat"}</span>`;
+}
+
 function kiraSemula() {
   S.guruLengkap = S.guru.map((gr) => {
     const lantikan = S.lantikan
@@ -153,10 +178,15 @@ function kiraSemula() {
         tempoh: o.jk.tempoh,
         skala: o.jk.skala,
         fizikal: o.jk.fizikal,
+        tarikh: o.jk.tarikh,
+        kategoriJawatan: o.jw.kategori,
       }));
     const g2 = { ...gr, lantikan };
     const b = kiraBebanGuru(g2, S.config, { kecualiPengurusan: S.kecualiPengurusan });
-    return { ...g2, beban: b.jumlahBeban, butiran: b.butiran, amaran: semakKesesuaian(g2, S.config) };
+    return {
+      ...g2, beban: b.jumlahBeban, butiran: b.butiran, amaran: semakKesesuaian(g2, S.config),
+      amaranTarikh: semakTarikh(lantikanUntukTarikh(lantikan), hariMin()),
+    };
   });
 }
 
@@ -509,10 +539,10 @@ function viewBeban() {
     </div>
   </div>
   <div class="statistik">
-    ${stat(labelBil, senarai.length)}${stat("Purata beban", nf(purata))}${stat("Tertinggi", nf(maks))}${stat("Terendah", nf(min))}${stat("Jurang", nf(maks - min))}
+    ${stat(labelBil, senarai.length)}${stat("Purata beban", nf(purata))}${stat("Tertinggi", nf(maks))}${stat("Terendah", nf(min))}${stat("Jurang", nf(maks - min))}${stat("Amaran tarikh", senarai.filter((g) => g.amaranTarikh.length).length)}
   </div>
   <div class="kad">
-    <div class="petunjuk"><span><i class="tinggi"></i>Melebihi 125% purata</span><span><i></i>Sekitar purata</span><span><i class="rendah"></i>Bawah 75% purata</span></div>
+    <div class="petunjuk"><span><i class="tinggi"></i>Melebihi 125% purata</span><span><i></i>Sekitar purata</span><span><i class="rendah"></i>Bawah 75% purata</span><span>⚠ Program bertindan / jarak &lt; ${hariMin()} hari (halakan tetikus untuk butiran)</span></div>
     <table class="jadual">
       <thead><tr><th>Nama</th><th>Gred</th><th>Umur</th><th class="n">Lantikan</th><th class="n">Beban</th><th class="lebar">Taburan</th></tr></thead>
       <tbody>${senarai
@@ -520,7 +550,7 @@ function viewBeban() {
           const kelas = g.beban > purata * 1.25 ? "tinggi" : g.beban < purata * 0.75 ? "rendah" : "";
           // Baris kedua: catatan pengurusan + jawatan/subjek (cth GURU FIZIK) + jabatan.
           const butir = [g.jawatan_hakiki, g.unit].filter(Boolean).map(esc).join(" · ");
-          const sub = `${tagPengurusan(g)}${catatanPengurusan(g) && butir ? " " : ""}${butir}`;
+          const sub = `${tagPengurusan(g)}${catatanPengurusan(g) && butir ? " " : ""}${butir}${tagTarikh(g.amaranTarikh) ? ` ${tagTarikh(g.amaranTarikh)}` : ""}`;
           return `<tr><td>${esc(g.nama)}${sub ? `<span class="sub">${sub}</span>` : ""}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
           <td class="n"><strong>${nf(g.beban)}</strong></td>
           <td><div class="palang"><span class="${kelas}" style="width:${maks ? (g.beban / maks) * 100 : 0}%"></span></div></td></tr>`;
@@ -604,10 +634,12 @@ function viewLantikan() {
     .join("");
 
   const guruSusun = [...S.guruLengkap].sort((a, b) => a.beban - b.beban);
+  const jwPilih = () => S.jwMap.get(Number($("#f-lantik")?.jawatan?.value)) || null;
   const opsGuru = (senarai) => `<option value="">${senarai.length ? "Pilih guru…" : "Tiada padanan"}</option>${senarai
     .map((g) => {
       const sudah = idAhli.has(g.id);
-      return `<option value="${g.id}">${esc(g.nama)}${catatanPengurusan(g) ? ` (${esc(catatanPengurusan(g))})` : ""}${g.gred ? ` · ${esc(g.gred)}` : ""} · beban ${nf(g.beban)}${g.umur ? ` · ${g.umur} thn` : ""}${
+      const bt = amaranTarikhJika(g, jk, jwPilih()).length;
+      return `<option value="${g.id}">${bt ? "⚠ " : ""}${esc(g.nama)}${catatanPengurusan(g) ? ` (${esc(catatanPengurusan(g))})` : ""}${g.gred ? ` · ${esc(g.gred)}` : ""} · beban ${nf(g.beban)}${g.umur ? ` · ${g.umur} thn` : ""}${
         sudah ? " · sudah dalam JK ini" : ""}</option>`;
     })
     .join("")}`;
@@ -621,14 +653,17 @@ function viewLantikan() {
   <div class="dua-lajur">
     <section class="kad">
       <label>Jawatankuasa<select id="s-jk">${opsJK}</select></label>
-      <p class="info">${jk.tempoh === "one_off" ? `One-off · skala ${esc(jk.skala)}` : "Sepanjang tahun"}
-        ${jk.fizikal ? ' · <span class="tag fizikal">Fizikal</span>' : ""} · ${ahli.length} ahli</p>
+      <p class="info">${jk.tempoh === "one_off" ? `One-off · skala ${esc(jk.skala)}` : `Sepanjang tahun · intensiti ${esc(jk.skala)}`}
+        ${jk.fizikal ? ' · <span class="tag fizikal">Fizikal</span>' : ""} · ${ahli.length} ahli
+        ${teksTarikh(jk) ? `<br>📅 ${esc(teksTarikh(jk))}` : ""}</p>
       <table class="jadual">
         <thead><tr><th>Jawatan</th><th>Guru</th><th class="n">Pemberat</th><th></th></tr></thead>
         <tbody>${ahli
           .map(({ l, g, jw }) => {
             const p = kiraPemberat({ jawatan: jw?.nama, tempoh: jk.tempoh, skala: jk.skala }, S.config, indeks).pemberat;
-            return `<tr><td>${esc(jw?.nama)}</td><td>${esc(g?.nama)}</td><td class="n">${nf(p)}</td>
+            const gl = S.guruLengkap.find((x) => x.id === l.guru_id);
+            const tg = tagTarikh((gl?.amaranTarikh || []).filter((a) => a.a.kod === jk.kod || a.b.kod === jk.kod));
+            return `<tr><td>${esc(jw?.nama)}</td><td>${esc(g?.nama)}${tg ? `<span class="sub">${tg}</span>` : ""}</td><td class="n">${nf(p)}</td>
               <td class="n"><button class="bahaya kecil" data-buang="${l.id}">Buang</button></td></tr>`;
           })
           .join("") || `<tr><td colspan="4" class="kosong">Belum ada ahli dalam jawatankuasa ini.</td></tr>`}</tbody>
@@ -644,6 +679,7 @@ function viewLantikan() {
           <input type="search" id="i-cari-guru" placeholder="Cari nama, no. gaji atau gred…" autocomplete="off">
           <select name="guru" required>${opsGuru(guruSusun)}</select></label>
         <p class="nota" id="nota-padanan"></p>
+        <p class="nota amaran-tarikh" id="nota-tarikh" hidden></p>
         <div class="baris-butang">
           <button type="button" id="b-cadang" class="sekunder">Cadang guru</button>
           <button class="utama" type="submit">Lantik</button>
@@ -679,12 +715,22 @@ function viewLantikan() {
     $("#nota-padanan").textContent = iCariGuru.value.trim()
       ? `${padan.length} padanan${padan.length === 1 ? " — dipilih automatik" : ""}` : "";
   };
-  iCariGuru.oninput = tapisGuru;
+  const paparAmaranTarikh = () => {
+    const g = S.guruLengkap.find((x) => String(x.id) === form.guru.value);
+    const am = amaranTarikhJika(g, jk, jwPilih());
+    const el = $("#nota-tarikh");
+    el.hidden = !am.length;
+    el.innerHTML = am.length ? `⚠ Amaran tarikh untuk ${esc(g.nama)}:<br>${am.map((a) => esc(a.mesej)).join("<br>")}` : "";
+    return am;
+  };
+  form.guru.onchange = paparAmaranTarikh;
+  form.jawatan.onchange = () => { tapisGuru(); paparAmaranTarikh(); };
+  iCariGuru.oninput = () => { tapisGuru(); paparAmaranTarikh(); };
   iCariGuru.onkeydown = (e) => { if (e.key === "Enter") e.preventDefault(); };
   $("#b-cadang").onclick = () => {
     const jw = S.jwMap.get(Number(form.jawatan.value));
-    const calon = S.guruLengkap
-      .filter((g) => !idAhli.has(g.id))
+    const tanpaTindan = S.guruLengkap.filter((g) => !idAhli.has(g.id) && !amaranTarikhJika(g, jk, jw).length);
+    const calon = (tanpaTindan.length ? tanpaTindan : S.guruLengkap.filter((g) => !idAhli.has(g.id)))
       .map((g) => ({ nama: String(g.id), umur: g.umur, lantikan: g.lantikan }));
     if (!calon.length) return toast("Semua guru sudah berada dalam JK ini.", "ralat");
     const slot = { jk: jk.nama, jawatan: jw.nama, tempoh: jk.tempoh, skala: jk.skala, fizikal: jk.fizikal };
@@ -696,11 +742,14 @@ function viewLantikan() {
     }
     form.guru.value = hasil.agihan[0].guru;
     const g = S.guru.find((x) => String(x.id) === hasil.agihan[0].guru);
-    $("#nota-cadang").textContent = `Cadangan: ${g?.nama}. Tekan "Lantik" untuk sahkan.`;
+    $("#nota-cadang").textContent = `Cadangan: ${g?.nama}. Tekan "Lantik" untuk sahkan.${jk.tarikh && tanpaTindan.length ? " (Guru dengan tarikh bertindan/rapat dielakkan.)" : ""}`;
+    paparAmaranTarikh();
   };
 
   form.onsubmit = (e) => {
     e.preventDefault();
+    const am = paparAmaranTarikh();
+    if (am.length && !confirm(`Amaran tarikh:\n${am.map((a) => a.mesej).join("\n")}\n\nTeruskan lantikan?`)) return;
     cuba(async () => {
       semak(await sb.from("lantikan").insert({
         guru_id: Number(form.guru.value),
@@ -965,12 +1014,12 @@ function viewJK() {
           .join("")}</select>
       </div>
       <table class="jadual">
-        <thead><tr><th>Kod</th><th>Nama</th><th>Tempoh</th><th>Skala</th><th></th><th class="n">Ahli</th><th></th></tr></thead>
+        <thead><tr><th>Kod</th><th>Nama</th><th>Tempoh</th><th title="One-off: saiz program. Tahunan: intensiti kerja (ikut KPI memo).">Skala / intensiti</th><th></th><th class="n">Ahli</th><th></th></tr></thead>
         <tbody>${senarai
           .map((j) => `<tr class="${j.aktif ? "" : "pudar"}">
-            <td><strong>${esc(j.kod)}</strong></td><td>${esc(j.nama)}</td>
+            <td><strong>${esc(j.kod)}</strong></td><td>${esc(j.nama)}${teksTarikh(j) ? `<span class="sub">📅 ${esc(teksTarikh(j))}</span>` : ""}</td>
             <td>${j.tempoh === "one_off" ? "One-off" : "Tahunan"}</td>
-            <td>${j.tempoh === "one_off" ? esc(j.skala) : "-"}</td>
+            <td>${esc(j.skala)}</td>
             <td>${j.fizikal ? '<span class="tag fizikal">Fizikal</span>' : ""}${j.aktif ? "" : ' <span class="tag">Tidak aktif</span>'}</td>
             <td class="n">${bilAhli(j.id)}</td>
             <td class="n nowrap"><button class="sekunder kecil" data-edit="${j.id}">Edit</button>
@@ -990,10 +1039,13 @@ function viewJK() {
           <label>Tempoh<select name="tempoh">
             <option value="tahunan" ${ed?.tempoh === "tahunan" ? "selected" : ""}>Sepanjang tahun</option>
             <option value="one_off" ${!ed || ed.tempoh === "one_off" ? "selected" : ""}>One-off</option></select></label>
-          <label>Skala (one-off)<select name="skala">
+          <label>Skala / intensiti<select name="skala">
             ${["besar", "sederhana", "kecil"].map((s) => `<option ${(ed?.skala || "sederhana") === s ? "selected" : ""}>${s}</option>`).join("")}
           </select></label>
         </div>
+        <p class="nota">Skala: saiz program (one-off) atau intensiti kerja JK tahunan — ditetapkan ikut kekerapan & skop KPI dalam memo.</p>
+        <label>Tarikh pelaksanaan<input name="tarikh" value="${esc(ed?.tarikh)}" placeholder="cth 11/1/2027 - 15/1/2027; 16/3/2027"></label>
+        <label>Nota tarikh<input name="tarikh_nota" value="${esc(ed?.tarikh_nota)}" placeholder="cth Kalendar PG"></label>
         <label class="semak"><input type="checkbox" name="fizikal" ${ed?.fizikal ? "checked" : ""}> Program fizikal (sukan / kem lasak)</label>
         <label class="semak"><input type="checkbox" name="aktif" ${!ed || ed.aktif ? "checked" : ""}> Aktif (dikira dalam beban & surat)</label>
         <div class="baris-butang">
@@ -1044,7 +1096,11 @@ function viewJK() {
       skala: form.skala.value,
       fizikal: form.fizikal.checked,
       aktif: form.aktif.checked,
+      tarikh: kosongJadiNull(form.tarikh.value),
+      tarikh_nota: kosongJadiNull(form.tarikh_nota.value),
     };
+    const { ralat } = parseTarikh(rekod.tarikh);
+    if (ralat) return toast(ralat, "ralat");
     cuba(async () => {
       if (ed) semak(await sb.from("jawatankuasa").update(rekod).eq("id", ed.id));
       else semak(await sb.from("jawatankuasa").insert(rekod));
@@ -1101,6 +1157,8 @@ function viewPemberat() {
           <label>Kecil<input name="kecil" type="number" step="0.05" min="0" max="3" value="${c.faktor_skala.kecil}"></label>
         </div>
         <label>Had umur JK fizikal<input name="had" type="number" min="18" max="75" value="${c.tetapan.had_umur_fizikal}"></label>
+        <label>Jarak minimum antara program (hari)<input name="jarak" type="number" min="0" max="60" value="${c.tetapan.jarak_minimum_hari ?? 7}"></label>
+        <p class="nota">Faktor skala dikenakan pada semua JK: saiz program (one-off) dan intensiti kerja JK tahunan (ikut KPI). Guru diberi amaran jika dua programnya bertindan atau jaraknya kurang daripada nilai di atas.</p>
         <div class="baris-butang"><button class="utama" type="submit">Simpan tetapan</button></div>
       </form>
     </section>
@@ -1141,6 +1199,7 @@ function viewPemberat() {
       { kunci: "faktor_tempoh", nilai: { tahunan: 1.0, one_off: Number(form.one_off.value) } },
       { kunci: "faktor_skala", nilai: { besar: Number(form.besar.value), sederhana: Number(form.sederhana.value), kecil: Number(form.kecil.value) } },
       { kunci: "had_umur_fizikal", nilai: Number(form.had.value) },
+      { kunci: "jarak_minimum_hari", nilai: Number(form.jarak.value) },
     ];
     cuba(async () => {
       semak(await sb.from("tetapan").upsert(rekod));
