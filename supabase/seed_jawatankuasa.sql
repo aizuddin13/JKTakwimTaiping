@@ -1,4 +1,5 @@
--- Senarai jawatankuasa daripada MEMO Senarai Jawatankuasa MRSM Taiping Sesi 2027 (96 jawatankuasa).
+-- Senarai jawatankuasa daripada MEMO Senarai Jawatankuasa MRSM Taiping Sesi 2027 (97 jawatankuasa;
+-- B14 Pemerkasaan Bitara ada dalam senarai ahli memo walaupun tiada dalam jadual ringkasan).
 -- A–D: jawatankuasa tetap (tahunan). E: program rasmi maktab (one-off).
 -- skala hanya memberi kesan pada one-off. fizikal = program sukan/kem lasak.
 -- Pangkalan data sedia ada: jalankan supabase/jawatankuasa_2027.sql (Migration 8) untuk menyelaraskan.
@@ -39,6 +40,7 @@ insert into jawatankuasa (kod, nama, kategori, tempoh, skala, fizikal) values
 ('B11','Pengurusan Kelas Akademik dan Bilik Gunasama','B','tahunan','sederhana',false),
 ('B12','Jemaah Akademik Maktab (JAM)','B','tahunan','kecil',false),
 ('B13','Pengurusan Pusat Sumber','B','tahunan','sederhana',false),
+('B14','Pemerkasaan Bitara','B','tahunan','sederhana',false),
 -- C: Timbalan Pengetua Pembangunan Pelajar
 ('C1','Pengurusan Asrama (Guru Asrama)','C','tahunan','besar',false),
 ('C2','Disiplin dan Rayuan Maktab (JDRM)','C','tahunan','sederhana',false),

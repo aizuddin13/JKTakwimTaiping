@@ -13,6 +13,7 @@ update jawatankuasa
 
 -- 2. Jawatankuasa baharu Sesi 2027.
 insert into jawatankuasa (kod, nama, kategori, tempoh, skala, fizikal) values
+  ('B14', 'Pemerkasaan Bitara',                        'B', 'tahunan', 'sederhana', false),
   ('C12', 'Senarai Guru Homeroom',                     'C', 'tahunan', 'sederhana', false),
   ('C13', 'Pembangunan Sahsiah Pelajar (FAST)',        'C', 'tahunan', 'sederhana', false),
   ('D11', 'Khidmat Masyarakat dan Pengantarabangsaan', 'D', 'tahunan', 'sederhana', false)
@@ -29,5 +30,9 @@ update jawatankuasa j set nama = v.nama
     ('E36', 'Jawatankuasa Kejohanan Sukan MRSM Negeri/Kebangsaan/Program BPM (Kem OSEM)')
   ) as v(kod, nama)
  where j.kod = v.kod;
+
+-- 4. Lantikan ahli diselaraskan dengan senarai ahli memo Sesi 2027 (24 Nov 2026) secara terus di
+--    pangkalan data (328 ditambah, lantikan draf lama yang tiada dalam memo dibuang).
+--    Sandaran sebelum penyelarasan: jadual lantikan_sandaran_20261124 (RLS hidup, tiada polisi).
 
 commit;
