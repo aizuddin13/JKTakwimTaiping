@@ -31,4 +31,5 @@ export const ABAI_AMARAN_TARIKH = [
   ["E14", "E15"], // Pendaftaran T5 & T4
   ["E4", "E36"],  // Anugerah SPM & Kejohanan Sukan MRSM
   ["E17", "E29"], // Hari Raya Perdana & Minggu Aktiviti Sem 1
+  ["E25", "E26"], // Kejohanan SUPER & Sukan Maktab (Rumah Sukan)
 ];
