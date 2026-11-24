@@ -27,7 +27,8 @@ supabase/pautan_login.sql    Migration 3: pautan login ikut email
 supabase/semak_lantikan.sql  Migration 4: semakan guru ikut No. Gaji + had cubaan
 supabase/perkongsian.sql     Migration 6: suis perkongsian lantikan kepada guru
 supabase/had_semakan.sql     Migration 7: IP dipercayai + had global untuk semakan (JALANKAN di SQL Editor)
-supabase/seed_jawatankuasa.sql  96 jawatankuasa A1–E36
+supabase/jawatankuasa_2027.sql  Migration 8: selaraskan jawatankuasa dengan memo Sesi 2027
+supabase/seed_jawatankuasa.sql  96 jawatankuasa Sesi 2027 (A1–A20, B1–B13, C1–C13, D1–D11, E1–E39)
 contoh/                      Contoh output
 ```
 
