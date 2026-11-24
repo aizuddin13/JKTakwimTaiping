@@ -34,5 +34,8 @@ update jawatankuasa j set nama = v.nama
 -- 4. Lantikan ahli diselaraskan dengan senarai ahli memo Sesi 2027 (24 Nov 2026) secara terus di
 --    pangkalan data (328 ditambah, lantikan draf lama yang tiada dalam memo dibuang).
 --    Sandaran sebelum penyelarasan: jadual lantikan_sandaran_20261124 (RLS hidup, tiada polisi).
+--    Nota: dalam memo, tajuk jadual ahli "C2 : JDM" dan "C3 : JDRM" terbalik berbanding senarai
+--    ringkasan (C2 = JDRM, C3 = JDM). Lantikan dipadankan ikut NAMA jawatankuasa, bukan kod jadual ahli.
+--    Jawatan 30 lantikan lama turut dikemas kini ikut memo (nama guru/staf kekal ikut jadual guru).
 
 commit;
