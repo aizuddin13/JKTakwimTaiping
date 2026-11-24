@@ -1,0 +1,96 @@
+-- Migration 9 (BELUM DIJALANKAN — menunggu semakan): KPI jawatankuasa (A–D) & tarikh pelaksanaan program rasmi (E)
+-- daripada MEMO Senarai Jawatankuasa MRSM Taiping Sesi 2027.
+-- Teks bebas: tarikh boleh jadi julat ("11-15 JANUARI 2027") atau rujukan ("Kalendar PG").
+-- Penyelaras tidak disimpan di sini — ia diambil daripada lantikan berjawatan Penyelaras.
+-- Selamat dijalankan berulang kali.
+
+alter table jawatankuasa add column if not exists kpi    text;
+alter table jawatankuasa add column if not exists tarikh text;
+
+update jawatankuasa j set kpi = v.kpi from (values
+  ('A1', 'Mengadakan mesyuarat pengurusan sekurang-kurangnya 1 kali sebulan.'),
+  ('A2', 'Melaksanakan mesyuarat senat 4 kali setahun untuk pembentangan prestasi maktab.'),
+  ('A3', 'Melaksanakan proses pelupusan untuk aset usang/rosak 2 kali setahun mengikut SOP & keputusan JSPN Perak.'),
+  ('A4', '100% pendaftaran dan pengemaskinian aset baharu dalam sistem dalam tempoh 14 hari penerimaan.'),
+  ('A5', 'Jawatankuasa bersidang dalam tempoh 3 hari bekerja selepas tarikh tutup iklan sebut harga.'),
+  ('A6', 'Laporan penilaian sebut harga disiapkan dalam tempoh 7 hari bekerja selepas pembukaan.'),
+  ('A7', 'Memastikan proses pengeluaran Surat Setuju Terima (SST) dikeluarkan dalam masa 14 hari.'),
+  ('A8', 'Mengemas kini lejar wang caruman pelajar dan sifar teguran audit bersyarat.'),
+  ('A9', '100% pematuhan kepada garis panduan perolehan EMR dan laporan perbelanjaan tepat setiap suku tahun.'),
+  ('A10', '80% aduan kerosakan awam/mekanikal/elektrikal diambil tindakan awal dalam tempoh 48 jam.'),
+  ('A11', 'Melaksanakan Latihan Pengosongan Bangunan & Kebakaran (Fire Drill) sekurang-kurangnya 2 kali setahun. (Siang & Malam)'),
+  ('A12', 'Memastikan unjuran kutipan hasil maktab mencapai sasaran 90% menjelang akhir tahun kewangan.'),
+  ('A13', 'Mencapai 95% ketersediaan (uptime) rangkaian internet maktab & menyelenggara komputer 2 kali setahun.'),
+  ('A14', 'Menjalankan pemeriksaan keselamatan tempat kerja 4 kali (Q1- Q4) setahun & Sifar kemalangan pekerjaan.'),
+  ('A15', 'Memastikan 100% keselamatan dokumen disimpan mengikut standard MQS & Arkib Negara'),
+  ('A16', 'Mencapai penarafan 5 Bintang atau skor melebihi 90% dalam audit MQS tahunan.'),
+  ('A17', 'Menganjurkan 2 program kesedaran antirasuah & integriti kepada staf setiap tahun.'),
+  ('A18', 'Dilaksanakan sebanyak 4 kali dalam setahun dan mencapai markah audit 90% dan ke atas.'),
+  ('A19', 'Menganjurkan sekurang-kurangnya 1 kempen/ pameran kesedaran jenayah siber/ buli setahun.'),
+  ('A20', 'Mengemas kini Daftar Risiko (Risk Register) Maktab 4 kali setahun.(QI,Q2,Q3,Q4)'),
+  ('B1', 'Merancang dan melaksanakan program Akademik sepanjang tahun 2027
+Mengadakan mesyuarat Jabatan 2 kali per semester'),
+  ('B2', 'Peningkatan 5% Gred Purata Maktab (GPM) bagi peperiksaan semester atau SPM.'),
+  ('B3', 'Menguruskan ujian 2 semester
+Menetapkan senarai yang layak bergraduasi'),
+  ('B4', 'Menjana Jadual waktu 1 kali per semester atau mengikut keperluan'),
+  ('B5', 'Melaksanakan sekurang-kurangnya 1 pameran projek SEM berskala maktab setiap tahun.'),
+  ('B6', '100% pelajar lulus dalam peperiksaan/penilaian akhir bagi semua subjek khas.'),
+  ('B7', '100% perjumpaan mentor-mentee (akademik) dilaksanakan 1 kali sebulan mengikut jadual.'),
+  ('B8', 'Melaksanakan 7 slot pembangunan guru & staf'),
+  ('B9', 'Mengadakan sekurang-kurangnya 2 sesi in-house training berkaitan integrasi iPad/teknologi dalam PdP.'),
+  ('B10', 'Menghasilkan/menghantar sekurang-kurangnya 1 projek inovasi ke pertandingan peringkat zon/kebangsaan.'),
+  ('B11', 'Memastikan 100% fasiliti (kerusi, meja, LCD) berkeadaan baik & pemantauan kondusif sebulan sekali.'),
+  ('B12', 'Mengadakan sidang JAM 1 kali/semester'),
+  ('B13', 'Peningkatan 10% jumlah peminjaman bahan bacaan & melaksanakan 2 program galakan membaca.'),
+  ('C1', '100% blok asrama mencapai standard kebersihan Gred A dalam pemeriksaan mingguan/bulanan.'),
+  ('C2', 'Menyelesaikan setiap kes siasatan dan rayuan tatatertib dalam tempoh 14 hari bekerja.'),
+  ('C3', 'Mengurangkan kadar kes salah laku berat/ kategori 1 pelajar sebanyak 10% berbanding tahun lalu.'),
+  ('C4', 'Melaksanakan pemeriksaan mengejut (spot-check) terancang sekurang-kurangnya 2 kali satu semester.'),
+  ('C5', '100% modul homeroom MRSM dilaksanakan dan perjumpaan dibuat mengikut takwim (setiap minggu).'),
+  ('C6', 'Mengadakan majlis bacaan Yasin/ Tazkirah secara konsisten 2 kali sebulan & kempen solat berjemaah.'),
+  ('C7', '100% pelajar layak (B40) dikenal pasti dan disalurkan bantuan sebelum berakhir setiap bulan April.'),
+  ('C8', 'Menjalankan sesi intervensi/ kaunseling untuk 100% pelajar yang mempunyai amaran disiplin/ akademik.'),
+  ('C9', 'Mengadakan Mesyuarat Agung Tahunan secara rasmi & menganjurkan 3 program jaringan ibu bapa-maktab.'),
+  ('C10', 'Menganjurkan minimum 1 aktiviti kesejahteraan/ hari keluarga untuk memupuk keharmonian staf setahun.'),
+  ('C11', '100% kelancaran ujian dengan sifar insiden keciciran calon akibat masalah teknikal di pusat ujian.'),
+  ('C12', 'Mengadakan perjumpaan rasmi pada setiap minggu.'),
+  ('C13', 'Menganjurkan 2 kali kem Sahsiah atau program bina insan perdana setiap tahun.'),
+  ('D1', 'Memastikan sekurang-kurangnya 3 persatuan/pasukan mencapai podium di peringkat zon atau kebangsaan.'),
+  ('D2', 'Mengadakan Mesyuarat Agung Tahunan sebelum Ogos & mengisytiharkan dividen sekurang-kurangnya 10%.'),
+  ('D3', 'Menganjurkan 1 Kejohanan Olahraga Tahunan dan 1 Kejohanan Merentas Desa mengikut takwim maktab.'),
+  ('D4', '100% kelab melaksanakan perjumpaan dan aktiviti sekurang-kurangnya 12 kali setahun (atau ikut silibus).'),
+  ('D5', 'Memastikan 100% pelajar tingkatan 4 & 5 menyertai sekurang-kurangnya 1 perkhemahan tahunan.'),
+  ('D6', 'Melaksanakan 2 fasa kursus kepimpinan dan pengurusan organisasi untuk Badan Pengawas/BWP.'),
+  ('D7', 'Menganjurkan 1 karnival Hari Keusahawanan Pelajar bagi memupuk skil perniagaan.'),
+  ('D8', 'Mengekalkan Gred 5 Bintang (melebihi 90 markah) untuk kebersihan & kebersihan kawasan maktab sepanjang tahun.'),
+  ('D9', 'Mengemas kini data PAJSK dan sistem merit kokurikulum pelajar selewat-lewatnya 1 bulan sebelum sesi akhir.'),
+  ('D10', 'Mengedarkan Buku Takwim Maktab pada minggu pertama sesi persekolahan baharu dibuka.')
+) as v(kod, kpi) where j.kod = v.kod;
+
+update jawatankuasa j set tarikh = v.tarikh from (values
+  ('E1', '11-15 JANUARI 2027'),
+  ('E2', '21 JANUARI 2027'),
+  ('E3', '25 JANUARI 2027'),
+  ('E4', '24 APRIL 2027'),
+  ('E5', 'Kalendar PG'),
+  ('E8', '1 OKTOBER 2027'),
+  ('E9', '6-8 DISEMBER 2027'),
+  ('E10', 'Kalendar PG'),
+  ('E11', 'Kalendar PG'),
+  ('E12', 'Kalendar PG'),
+  ('E13', 'Kalendar LPM'),
+  ('E14', '3-6 JANUARI 2027'),
+  ('E15', '5-8 JANUARI 2027'),
+  ('E16', '4-5 MAC 2027'),
+  ('E17', '26 MAC 2027'),
+  ('E18', '14 MEI 2027'),
+  ('E19', '15 September'),
+  ('E20', '30 Januari'),
+  ('E22', '23-27 OGOS 2027'),
+  ('E25', '16 MAC 2027 (SUPER); 29 JANUARI 2027 (MERENTAS DESA)'),
+  ('E26', '16 MAC 2027 (SUPER/KEJORA)'),
+  ('E29', '22-26 MAC 2027'),
+  ('E35', 'MARA Perak'),
+  ('E36', '23-25 April 2027')
+) as v(kod, tarikh) where j.kod = v.kod;
