@@ -39,6 +39,7 @@ const S = {
   bebanCari: "",
   bebanUmur: "",
   bebanUnit: "",
+  bebanBuka: new Set(), // id guru yang butiran lantikannya sedang dibuka
   bebanJawatan: "",
   guruTapis: { gred: "", jawatan: "", peranan: "", jk: "", umur: "" },
   jkEdit: null,
@@ -180,6 +181,7 @@ function kiraSemula() {
         fizikal: o.jk.fizikal,
         tarikh: o.jk.tarikh,
         kategoriJawatan: o.jw.kategori,
+        catatan: o.x.catatan,
       }));
     const g2 = { ...gr, lantikan };
     const b = kiraBebanGuru(g2, S.config, { kecualiPengurusan: S.kecualiPengurusan });
@@ -484,6 +486,32 @@ const stat = (label, nilai) => `<div class="stat"><span>${label}</span><strong>$
 
 // ---------- Tab: Papan Beban ----------
 
+// Panel butiran: senarai lantikan seorang guru (dipapar bila baris di Papan Beban diklik).
+function butiranLantikan(g) {
+  if (!g.lantikan.length) return `<p class="nota">Tiada lantikan.</p>`;
+  const baris = g.lantikan
+    .map((l, i) => {
+      const b = g.butiran[i] || {};
+      const jk = S.jkMap.get(l.jk_id);
+      const tarikh = teksTarikh(jk);
+      const pemberat = b.dikira === false ? `<span class="sub" title="${esc(b.sebab || "")}">tidak dikira</span>` : nf(b.pemberat ?? 0);
+      return `<tr><td class="nowrap"><strong>${esc(l.kod)}</strong></td>
+        <td>${esc(l.jk)}${tarikh ? `<span class="sub">📅 ${esc(tarikh)}</span>` : ""}</td>
+        <td>${esc(l.jawatan)}${l.catatan ? `<span class="sub">${esc(l.catatan)}</span>` : ""}</td>
+        <td class="nowrap">${l.tempoh === "one_off" ? "One-off" : "Tahunan"} · ${esc(l.skala || "sederhana")}</td>
+        <td class="n">${pemberat}</td></tr>`;
+    })
+    .join("");
+  const amaran = g.amaranTarikh?.length
+    ? `<p class="nota amaran-tarikh">⚠ ${g.amaranTarikh.map((a) => esc(a.mesej)).join("<br>⚠ ")}</p>`
+    : "";
+  return `<table class="jadual kecil">
+      <thead><tr><th>Kod</th><th>Jawatankuasa</th><th>Jawatan</th><th>Tempoh · skala</th><th class="n">Pemberat</th></tr></thead>
+      <tbody>${baris}</tbody>
+      <tfoot><tr><td colspan="4" class="n">Jumlah beban</td><td class="n"><strong>${nf(g.beban)}</strong></td></tr></tfoot>
+    </table>${amaran}`;
+}
+
 function viewBeban() {
   const isi = $("#isi");
   const isGuruDG = (g) => /^DG/i.test(String(g.gred || "").trim());
@@ -536,6 +564,7 @@ function viewBeban() {
       <select id="s-beban-umur" class="${S.bebanUmur ? "aktif" : ""}"><option value="">Semua umur</option>${[["<30", "Bawah 30 thn"], ["30-39", "30–39 thn"], ["40-49", "40–49 thn"], ["50+", "50 thn ke atas"]]
         .map(([v, t]) => `<option value="${v}" ${S.bebanUmur === v ? "selected" : ""}>${t}</option>`).join("")}</select>
       ${adaTapis ? '<button type="button" class="sekunder kecil" id="b-beban-reset">Set semula</button>' : ""}
+      ${S.bebanBuka.size ? '<button type="button" class="sekunder kecil" id="b-beban-tutup">Tutup semua butiran</button>' : ""}
     </div>
   </div>
   <div class="statistik">
@@ -551,9 +580,12 @@ function viewBeban() {
           // Baris kedua: catatan pengurusan + jawatan/subjek (cth GURU FIZIK) + jabatan.
           const butir = [g.jawatan_hakiki, g.unit].filter(Boolean).map(esc).join(" · ");
           const sub = `${tagPengurusan(g)}${catatanPengurusan(g) && butir ? " " : ""}${butir}${tagTarikh(g.amaranTarikh) ? ` ${tagTarikh(g.amaranTarikh)}` : ""}`;
-          return `<tr><td>${esc(g.nama)}${sub ? `<span class="sub">${sub}</span>` : ""}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
+          const buka = S.bebanBuka.has(g.id);
+          return `<tr class="boleh-klik${buka ? " dibuka" : ""}" data-guru="${g.id}" title="Klik untuk ${buka ? "tutup" : "lihat"} senarai lantikan">
+          <td><span class="anak-panah">${buka ? "▾" : "▸"}</span>${esc(g.nama)}${sub ? `<span class="sub">${sub}</span>` : ""}</td><td class="nowrap">${esc(g.gred || "-")}</td><td>${g.umur ?? "-"}</td><td class="n">${g.lantikan.length}</td>
           <td class="n"><strong>${nf(g.beban)}</strong></td>
-          <td><div class="palang"><span class="${kelas}" style="width:${maks ? (g.beban / maks) * 100 : 0}%"></span></div></td></tr>`;
+          <td><div class="palang"><span class="${kelas}" style="width:${maks ? (g.beban / maks) * 100 : 0}%"></span></div></td></tr>${
+            buka ? `<tr class="butiran-guru"><td colspan="6">${butiranLantikan(g)}</td></tr>` : ""}`;
         })
         .join("") || `<tr><td colspan="6" class="kosong">${S.guruLengkap.length ? "Tiada padanan untuk penapis ini." : "Tiada guru lagi. Tambah guru di tab Guru."}</td></tr>`}</tbody>
     </table>
@@ -562,6 +594,14 @@ function viewBeban() {
   isi.querySelectorAll("[data-kumpulan]").forEach((b) => {
     b.onclick = () => {
       S.bebanKumpulan = b.dataset.kumpulan;
+      viewBeban();
+    };
+  });
+  isi.querySelectorAll("tr[data-guru]").forEach((tr) => {
+    tr.onclick = () => {
+      const id = Number(tr.dataset.guru);
+      if (S.bebanBuka.has(id)) S.bebanBuka.delete(id);
+      else S.bebanBuka.add(id);
       viewBeban();
     };
   });
@@ -589,6 +629,11 @@ function viewBeban() {
   };
   $("#s-beban-umur").onchange = (e) => {
     S.bebanUmur = e.target.value;
+    viewBeban();
+  };
+  const bTutup = $("#b-beban-tutup");
+  if (bTutup) bTutup.onclick = () => {
+    S.bebanBuka.clear();
     viewBeban();
   };
   const bReset = $("#b-beban-reset");
