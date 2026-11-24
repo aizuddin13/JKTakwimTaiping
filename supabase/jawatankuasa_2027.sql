@@ -1,0 +1,41 @@
+-- Migration 8: selaraskan senarai jawatankuasa dengan MEMO Senarai Jawatankuasa MRSM Taiping Sesi 2027.
+-- Selamat dijalankan berulang kali (idempotent). Lantikan sedia ada dikekalkan
+-- (baris dikemas kini ikut kod / dianjak kod, bukan dipadam).
+
+begin;
+
+-- 1. C12 "Pembangunan Sahsiah Pelajar" dianjak ke C13 (FAST). Lantikan ikut sekali (jk_id sama).
+update jawatankuasa
+   set kod = 'C13', nama = 'Pembangunan Sahsiah Pelajar (FAST)'
+ where kod = 'C12'
+   and nama ilike '%sahsiah%'
+   and not exists (select 1 from jawatankuasa where kod = 'C13');
+
+-- 2. Jawatankuasa baharu Sesi 2027.
+insert into jawatankuasa (kod, nama, kategori, tempoh, skala, fizikal) values
+  ('B14', 'Pemerkasaan Bitara',                        'B', 'tahunan', 'sederhana', false),
+  ('C12', 'Senarai Guru Homeroom',                     'C', 'tahunan', 'sederhana', false),
+  ('C13', 'Pembangunan Sahsiah Pelajar (FAST)',        'C', 'tahunan', 'sederhana', false),
+  ('D11', 'Khidmat Masyarakat dan Pengantarabangsaan', 'D', 'tahunan', 'sederhana', false)
+on conflict (kod) do nothing;
+
+-- 3. Nama dikemas kini ikut memo 2027 (tempoh/skala/fizikal tidak disentuh).
+update jawatankuasa j set nama = v.nama
+  from (values
+    ('A11', 'Jawatankuasa MARA Emergency Response Team (MERT) & Taskforce Maktab'),
+    ('A12', 'Jawatankuasa Pengurusan Hasil dan Piawai/Kos Pusat (JPHPKPP)'),
+    ('A16', 'Jawatankuasa MARA Ecosystem Quality Standard (MQS)'),
+    ('A17', 'Jawatankuasa Tatakelola (JTK) MARA'),
+    ('A19', 'Jawatankuasa Kelab Pencegahan Jenayah'),
+    ('E36', 'Jawatankuasa Kejohanan Sukan MRSM Negeri/Kebangsaan/Program BPM (Kem OSEM)')
+  ) as v(kod, nama)
+ where j.kod = v.kod;
+
+-- 4. Lantikan ahli diselaraskan dengan senarai ahli memo Sesi 2027 (24 Nov 2026) secara terus di
+--    pangkalan data (328 ditambah, lantikan draf lama yang tiada dalam memo dibuang).
+--    Sandaran sebelum penyelarasan: jadual lantikan_sandaran_20261124 (RLS hidup, tiada polisi).
+--    Nota: dalam memo, tajuk jadual ahli "C2 : JDM" dan "C3 : JDRM" terbalik berbanding senarai
+--    ringkasan (C2 = JDRM, C3 = JDM). Lantikan dipadankan ikut NAMA jawatankuasa, bukan kod jadual ahli.
+--    Jawatan 30 lantikan lama turut dikemas kini ikut memo (nama guru/staf kekal ikut jadual guru).
+
+commit;

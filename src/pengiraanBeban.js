@@ -5,7 +5,9 @@
 // Sumber tunggal nilai: pemberat_jawatan.json
 // Formula: pemberat_akhir = asas_jawatan * faktor_tempoh * faktor_skala
 //   faktor_tempoh : tahunan = 1.0 , one-off = 0.7
-//   faktor_skala  : besar = 1.2 , sederhana = 1.0 , kecil = 0.8  (one-off sahaja)
+//   faktor_skala  : besar = 1.2 , sederhana = 1.0 , kecil = 0.8
+//     one-off : saiz program
+//     tahunan : intensiti kerja JK (ditetapkan ikut KPI memo — kekerapan & skop)
 
 // ---------- 1. Bina indeks carian daripada config ----------
 
@@ -65,12 +67,9 @@ export function kiraPemberat(lantikan, config, indeks = binaIndeks(config)) {
   const tempoh = rekod.tempoh || lantikan.tempoh || "tahunan";
   const faktorTempoh = config.faktor_tempoh?.[tempoh] ?? 1.0;
 
-  // Faktor skala hanya untuk one-off.
-  let faktorSkala = 1.0;
-  if (tempoh === "one_off") {
-    const skala = lantikan.skala || "sederhana";
-    faktorSkala = config.faktor_skala?.[skala] ?? 1.0;
-  }
+  // Faktor skala: saiz program (one-off) atau intensiti kerja JK (tahunan).
+  const skala = lantikan.skala || "sederhana";
+  const faktorSkala = config.faktor_skala?.[skala] ?? 1.0;
 
   const pemberat = Math.round(rekod.asas * faktorTempoh * faktorSkala * 100) / 100;
 
