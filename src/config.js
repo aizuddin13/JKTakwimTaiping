@@ -24,3 +24,11 @@ export const PENGURUSAN_TERTINGGI = {
   "MOHAMAD KHAIRUL AIZUDDIN BIN KHASIM": "Timbalan Pengetua Pembangunan Bakat",
   "SITI AMINAH BINTI ABDULLAH": "Penolong Pegawai Tadbir Kanan",
 };
+
+// Pasangan program yang amaran tarikhnya DIABAIKAN (dirancang berlangsung serentak
+// dengan jawatankuasa yang sama). Tambah/buang pasangan di sini.
+export const ABAI_AMARAN_TARIKH = [
+  ["E14", "E15"], // Pendaftaran T5 & T4
+  ["E4", "E36"],  // Anugerah SPM & Kejohanan Sukan MRSM
+  ["E17", "E29"], // Hari Raya Perdana & Minggu Aktiviti Sem 1
+];

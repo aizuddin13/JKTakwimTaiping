@@ -75,8 +75,8 @@ Nilai asas pemberat (Penyelaras = 10 hingga Penasihat = 2) ditala dalam `data/pe
 - **Tarikh program:** lajur `tarikh` (cth `11/1/2027 - 15/1/2027; 16/3/2027`) dan `tarikh_nota` (cth "Kalendar PG").
   Guru yang dilantik dalam dua program bertindan atau jaraknya kurang daripada `jarak_minimum_hari` (lalai 7, tab Pemberat)
   ditanda ⚠ di Papan Beban & Lantikan; "Cadang guru" mengelakkan guru sebegini.
-- **Kumpulan program serentak** (`kumpulan_tarikh`): program yang sengaja dirancang serentak dengan jawatankuasa
-  dikongsi (cth E14 & E15 Pendaftaran) diletak dalam kumpulan sama — tiada amaran tarikh antara mereka.
+- **Abai amaran:** pasangan program yang memang dirancang serentak (cth E14 & E15 Pendaftaran) disenaraikan dalam
+  `ABAI_AMARAN_TARIKH` di `src/config.js` — amaran antara pasangan ini tidak dipaparkan.
 
 ## Fungsi utama
 

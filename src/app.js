@@ -5,7 +5,7 @@
 // Versi dipin secara tepat (bukan "@2" terapung) supaya kemas kini pustaka dibuat dengan sengaja,
 // bukan secara automatik oleh CDN. Semak nota keluaran sebelum menaikkan versi.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
-import { SUPABASE_URL, SUPABASE_KEY, MAKLUMAT_SEKOLAH, PENGURUSAN_TERTINGGI } from "./config.js";
+import { SUPABASE_URL, SUPABASE_KEY, MAKLUMAT_SEKOLAH, PENGURUSAN_TERTINGGI, ABAI_AMARAN_TARIKH } from "./config.js";
 import { muatConfig } from "./supabaseData.js";
 import { kiraBebanGuru, kiraPemberat, binaIndeks } from "./pengiraanBeban.js";
 import { agihSeimbang, semakKesesuaian } from "./penyeimbang.js";
@@ -149,15 +149,11 @@ function amaranTarikhJika(g, jk, jw = null) {
   if (!g || !jk?.tarikh) return [];
   if (S.kecualiPengurusan && jw?.kategori === "pengurusan") return [];
   const sedia = lantikanUntukTarikh(g.lantikan).filter((l) => l.kod !== jk.kod);
-  return semakTarikh([...sedia, { kod: jk.kod, jk: jk.nama, tarikh: jk.tarikh, kumpulan: jk.kumpulan_tarikh }], hariMin())
+  return semakTarikh([...sedia, { kod: jk.kod, jk: jk.nama, tarikh: jk.tarikh }], hariMin(), ABAI_AMARAN_TARIKH)
     .filter((a) => a.a.kod === jk.kod || a.b.kod === jk.kod);
 }
 
-// Lajur kumpulan_tarikh wujud selepas bahagian akhir supabase/intensiti_tarikh.sql dijalankan.
-const adaKumpulan = () => S.jk.some((j) => "kumpulan_tarikh" in j);
-
-const teksTarikh = (jk) => [jk?.tarikh ? formatTarikh(jk.tarikh) : "", jk?.tarikh_nota || "",
-  jk?.kumpulan_tarikh ? `serentak: ${jk.kumpulan_tarikh}` : ""].filter(Boolean).join(" · ");
+const teksTarikh = (jk) => [jk?.tarikh ? formatTarikh(jk.tarikh) : "", jk?.tarikh_nota || ""].filter(Boolean).join(" · ");
 
 function tagTarikh(senarai) {
   if (!senarai?.length) return "";
@@ -183,14 +179,13 @@ function kiraSemula() {
         skala: o.jk.skala,
         fizikal: o.jk.fizikal,
         tarikh: o.jk.tarikh,
-        kumpulan: o.jk.kumpulan_tarikh,
         kategoriJawatan: o.jw.kategori,
       }));
     const g2 = { ...gr, lantikan };
     const b = kiraBebanGuru(g2, S.config, { kecualiPengurusan: S.kecualiPengurusan });
     return {
       ...g2, beban: b.jumlahBeban, butiran: b.butiran, amaran: semakKesesuaian(g2, S.config),
-      amaranTarikh: semakTarikh(lantikanUntukTarikh(lantikan), hariMin()),
+      amaranTarikh: semakTarikh(lantikanUntukTarikh(lantikan), hariMin(), ABAI_AMARAN_TARIKH),
     };
   });
 }
@@ -1051,10 +1046,6 @@ function viewJK() {
         <p class="nota">Skala: saiz program (one-off) atau intensiti kerja JK tahunan — ditetapkan ikut kekerapan & skop KPI dalam memo.</p>
         <label>Tarikh pelaksanaan<input name="tarikh" value="${esc(ed?.tarikh)}" placeholder="cth 11/1/2027 - 15/1/2027; 16/3/2027"></label>
         <label>Nota tarikh<input name="tarikh_nota" value="${esc(ed?.tarikh_nota)}" placeholder="cth Kalendar PG"></label>
-        ${adaKumpulan() ? `<label>Kumpulan program serentak<input name="kumpulan_tarikh" list="dl-kumpulan" value="${esc(ed?.kumpulan_tarikh)}" placeholder="cth Pendaftaran T4 & T5"></label>
-        <datalist id="dl-kumpulan">${[...new Set(S.jk.map((j) => j.kumpulan_tarikh).filter(Boolean))]
-          .map((k) => `<option value="${esc(k)}">`).join("")}</datalist>
-        <p class="nota">Program dalam kumpulan yang sama dirancang serentak dengan jawatankuasa dikongsi — tiada amaran tarikh antara mereka.</p>` : ""}
         <label class="semak"><input type="checkbox" name="fizikal" ${ed?.fizikal ? "checked" : ""}> Program fizikal (sukan / kem lasak)</label>
         <label class="semak"><input type="checkbox" name="aktif" ${!ed || ed.aktif ? "checked" : ""}> Aktif (dikira dalam beban & surat)</label>
         <div class="baris-butang">
@@ -1107,7 +1098,6 @@ function viewJK() {
       aktif: form.aktif.checked,
       tarikh: kosongJadiNull(form.tarikh.value),
       tarikh_nota: kosongJadiNull(form.tarikh_nota.value),
-      ...(adaKumpulan() ? { kumpulan_tarikh: kosongJadiNull(form.kumpulan_tarikh.value) } : {}),
     };
     const { ralat } = parseTarikh(rekod.tarikh);
     if (ralat) return toast(ralat, "ralat");

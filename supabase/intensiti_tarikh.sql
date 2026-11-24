@@ -50,15 +50,3 @@ update jawatankuasa j set tarikh = v.tarikh, tarikh_nota = v.nota from (values
   ('E36', '23/4/2027 - 25/4/2027', null)
 ) as v(kod, tarikh, nota) where j.kod = v.kod;
 
--- Kumpulan program serentak: program dalam kumpulan sama dirancang berlangsung serentak dengan
--- jawatankuasa dikongsi, jadi guru yang sama dalam kedua-duanya TIDAK diberi amaran tarikh.
-alter table jawatankuasa add column if not exists kumpulan_tarikh text;
-
-update jawatankuasa j set kumpulan_tarikh = v.k from (values
-  ('E14', 'Pendaftaran T4 & T5'),
-  ('E15', 'Pendaftaran T4 & T5'),
-  ('E4',  'Anugerah SPM & Kejohanan Sukan April'),
-  ('E36', 'Anugerah SPM & Kejohanan Sukan April'),
-  ('E17', 'Hari Raya & Minggu Aktiviti Sem 1'),
-  ('E29', 'Hari Raya & Minggu Aktiviti Sem 1')
-) as v(kod, k) where j.kod = v.kod and j.kumpulan_tarikh is null;
