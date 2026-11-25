@@ -101,7 +101,7 @@ function toast(mesej, jenis = "ok") {
 
 function mesejRalat(e) {
   if (/invalid login credentials/i.test(e?.message || "")) return "Email atau kata laluan salah.";
-  if (e?.code === "23505") return "Rekod bertindih: data yang sama sudah wujud.";
+  if (e?.code === "23505") return "Rekod bertindih: data yang sama sudah wujud. (Untuk lantikan: guru ini sudah memegang jawatan yang sama dalam JK ini — guna butang \"Unit\" untuk menambah unit pada catatannya.)";
   if (e?.code === "23503") return "Tidak boleh dipadam: rekod ini masih digunakan oleh lantikan.";
   return e?.message || String(e);
 }
@@ -664,8 +664,14 @@ function viewLantikan() {
 
   const ahli = S.lantikan
     .filter((l) => l.jk_id === jk.id)
-    .map((l) => ({ l, g: S.guru.find((x) => x.id === l.guru_id), jw: S.jwMap.get(l.jawatan_id) }))
-    .sort((a, b) => (b.jw?.asas || 0) - (a.jw?.asas || 0));
+    .map((l) => ({ l, g: S.guru.find((x) => x.id === l.guru_id), jw: S.jwMap.get(l.jawatan_id) }));
+  // Unit kokurikulum / sub-bahagian disimpan dalam lantikan.catatan (cth "Persatuan Taekwando Malaysia").
+  const senaraiUnit = [...new Set(ahli.map((a) => (a.l.catatan || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ms"));
+  const adaUnit = senaraiUnit.length > 0;
+  ahli.sort((a, b) =>
+    (adaUnit ? (a.l.catatan || "\uffff").localeCompare(b.l.catatan || "\uffff", "ms") : 0) ||
+    (b.jw?.asas || 0) - (a.jw?.asas || 0));
   const idAhli = new Set(ahli.map((a) => a.l.guru_id));
 
   const opsJK = ["A", "B", "C", "D", "E"]
@@ -704,12 +710,18 @@ function viewLantikan() {
       <table class="jadual">
         <thead><tr><th>Jawatan</th><th>Guru</th><th class="n">Pemberat</th><th></th></tr></thead>
         <tbody>${ahli
-          .map(({ l, g, jw }) => {
+          .map(({ l, g, jw }, i) => {
             const p = kiraPemberat({ jawatan: jw?.nama, tempoh: jk.tempoh, skala: jk.skala }, S.config, indeks).pemberat;
             const gl = S.guruLengkap.find((x) => x.id === l.guru_id);
             const tg = tagTarikh((gl?.amaranTarikh || []).filter((a) => a.a.kod === jk.kod || a.b.kod === jk.kod));
-            return `<tr><td>${esc(jw?.nama)}</td><td>${esc(g?.nama)}${tg ? `<span class="sub">${tg}</span>` : ""}</td><td class="n">${nf(p)}</td>
-              <td class="n"><button class="bahaya kecil" data-buang="${l.id}">Buang</button></td></tr>`;
+            const unit = (l.catatan || "").trim();
+            const unitSebelum = i ? (ahli[i - 1].l.catatan || "").trim() : null;
+            const tajuk = adaUnit && unit !== unitSebelum
+              ? `<tr class="tajuk-unit"><td colspan="4">${unit ? esc(unit) : "Tanpa unit / catatan"}</td></tr>` : "";
+            return `${tajuk}<tr><td>${esc(jw?.nama)}${unit && !adaUnit ? `<span class="sub">${esc(unit)}</span>` : ""}</td>
+              <td>${esc(g?.nama)}${tg ? `<span class="sub">${tg}</span>` : ""}</td><td class="n">${nf(p)}</td>
+              <td class="n nowrap"><button class="sekunder kecil" data-unit="${l.id}" title="Tukar unit / catatan">Unit</button>
+                <button class="bahaya kecil" data-buang="${l.id}">Buang</button></td></tr>`;
           })
           .join("") || `<tr><td colspan="4" class="kosong">Belum ada ahli dalam jawatankuasa ini.</td></tr>`}</tbody>
       </table>
@@ -724,6 +736,9 @@ function viewLantikan() {
           <input type="search" id="i-cari-guru" placeholder="Cari nama, no. gaji atau gred…" autocomplete="off">
           <select name="guru" required>${opsGuru(guruSusun)}</select></label>
         <p class="nota" id="nota-padanan"></p>
+        <label>Unit / catatan <small>(pilihan)</small>
+          <input name="catatan" list="dl-unit" autocomplete="off" placeholder="${adaUnit ? `cth ${esc(senaraiUnit[0])}` : "cth nama kelab / sukan / unit"}"></label>
+        <datalist id="dl-unit">${senaraiUnit.map((u) => `<option value="${esc(u)}">`).join("")}</datalist>
         <p class="nota amaran-tarikh" id="nota-tarikh" hidden></p>
         <div class="baris-butang">
           <button type="button" id="b-cadang" class="sekunder">Cadang guru</button>
@@ -738,6 +753,19 @@ function viewLantikan() {
     S.jkPilih = Number(e.target.value);
     viewLantikan();
   };
+
+  isi.querySelectorAll("[data-unit]").forEach((b) => {
+    b.onclick = () => {
+      const l = S.lantikan.find((x) => x.id === Number(b.dataset.unit));
+      const g = S.guru.find((x) => x.id === l?.guru_id);
+      const baru = prompt(`Unit / catatan untuk ${g?.nama || "lantikan ini"}:\n(kosongkan untuk buang)`, l?.catatan || "");
+      if (baru === null) return;
+      cuba(async () => {
+        semak(await sb.from("lantikan").update({ catatan: kosongJadiNull(baru) }).eq("id", l.id));
+        await segarkan();
+      }, "Unit dikemas kini.");
+    };
+  });
 
   isi.querySelectorAll("[data-buang]").forEach((b) => {
     b.onclick = () => {
@@ -800,6 +828,7 @@ function viewLantikan() {
         guru_id: Number(form.guru.value),
         jk_id: jk.id,
         jawatan_id: Number(form.jawatan.value),
+        catatan: kosongJadiNull(form.catatan.value),
       }));
       await segarkan();
     }, "Lantikan disimpan.");
