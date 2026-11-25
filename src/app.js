@@ -118,12 +118,28 @@ async function cuba(fn, berjaya) {
 
 // ---------- Data ----------
 
+// Supabase (PostgREST) memulangkan maksimum 1000 baris bagi setiap permintaan.
+// Muat semua baris secara berperingkat supaya tiada data yang terpotong senyap-senyap
+// (lantikan sudah melebihi 1000 baris).
+async function muatSemuaBaris(jadual, susun = "id", menaik = true) {
+  const SAIZ = 1000;
+  const semua = [];
+  for (let mula = 0; ; mula += SAIZ) {
+    const data = semak(await sb.from(jadual).select("*")
+      .order(susun, { ascending: menaik }).order("id", { ascending: true })
+      .range(mula, mula + SAIZ - 1));
+    semua.push(...data);
+    if (data.length < SAIZ) break;
+  }
+  return { data: semua, error: null };
+}
+
 async function muatSemua() {
   const [g, jk, jw, l, config, kongsi] = await Promise.all([
-    sb.from("guru").select("*").order("nama"),
-    sb.from("jawatankuasa").select("*"),
-    sb.from("jawatan").select("*").order("asas", { ascending: false }),
-    sb.from("lantikan").select("*"),
+    muatSemuaBaris("guru", "nama"),
+    muatSemuaBaris("jawatankuasa"),
+    muatSemuaBaris("jawatan", "asas", false),
+    muatSemuaBaris("lantikan"),
     muatConfig(sb),
     sb.from("tetapan").select("nilai").eq("kunci", "perkongsian_dibuka").maybeSingle(),
   ]);
