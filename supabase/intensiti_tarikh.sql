@@ -15,9 +15,10 @@ alter table jawatankuasa add column if not exists tarikh_nota text;
 insert into tetapan (kunci, nilai) values ('jarak_minimum_hari', '7'::jsonb)
 on conflict (kunci) do nothing;
 
--- Intensiti JK tahunan A–D ikut KPI
+-- Intensiti JK tahunan A–D ikut KPI.
+-- D3/D4/D5 (kokurikulum) sengaja sederhana: pemberat penasihat tetap Ketua = 5, Guru Penasihat = 4.
 update jawatankuasa set skala = case
-  when kod in ('A1','A10','A13','A16','B2','B7','C1','C2','C5','C6','C8','C12','D2','D4','D5','D8') then 'besar'
+  when kod in ('A1','A10','A13','A16','B2','B7','C1','C2','C5','C6','C8','C12','D2','D8') then 'besar'
   when kod in ('A2','A3','A5','A6','A7','A17','A19','A20','B4','B5','B10','B12','C4','C10','D7','D10') then 'kecil'
   else 'sederhana' end
 where kategori in ('A','B','C','D');
@@ -50,3 +51,6 @@ update jawatankuasa j set tarikh = v.tarikh, tarikh_nota = v.nota from (values
   ('E36', '23/4/2027 - 25/4/2027', null)
 ) as v(kod, tarikh, nota) where j.kod = v.kod;
 
+
+-- Pemberat kokurikulum: Ketua Guru Penasihat = 5 (Guru Penasihat = 4).
+update jawatan set asas = 5 where nama = 'Ketua Guru Penasihat';

@@ -37,7 +37,7 @@
     { "jawatan": "Penasihat", "alias": [], "asas": 2, "kategori": "pengurusan", "nota": "Pengawasan/honorari; selalunya Pengetua" }
   ],
   "jawatan_kokurikulum": [
-    { "jawatan": "Ketua Guru Penasihat", "alias": ["Ketua Guru Asrama"], "asas": 8, "tempoh": "tahunan", "nota": "Kelab/Persatuan/Unit Beruniform/Sukan; perjumpaan mingguan" },
+    { "jawatan": "Ketua Guru Penasihat", "alias": [], "asas": 5, "tempoh": "tahunan", "nota": "Kelab/Persatuan/Unit Beruniform/Sukan; perjumpaan mingguan" },
     { "jawatan": "Guru Kelas", "alias": ["Penasihat Homeroom", "Guru Penasihat Homeroom"], "asas": 7, "tempoh": "tahunan", "nota": "Tanggungjawab pastoral harian" },
     { "jawatan": "Guru Penasihat", "alias": ["Guru Penasihat Pembantu"], "asas": 5, "tempoh": "tahunan", "nota": "Pembantu penasihat" },
     { "jawatan": "Pembimbing Rakan Sebaya", "alias": ["PRS"], "asas": 4, "tempoh": "tahunan", "nota": "" }

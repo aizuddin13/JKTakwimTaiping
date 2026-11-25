@@ -45,7 +45,7 @@ const S = {
   jkEdit: null,
   surat: {
     sesi: MAKLUMAT_SEKOLAH.sesi,
-    tarikh: new Date().toISOString().slice(0, 10),
+    tarikh: tarikhTempatan(),
     tarikhHijrah: "",                          // kosong = kira automatik daripada tarikh
     rujukan: MAKLUMAT_SEKOLAH.rujukan,
     salinan: "",
@@ -71,6 +71,23 @@ const kosongJadiNull = (v) => {
   const t = String(v ?? "").trim();
   return t === "" ? null : t;
 };
+// Tarikh hari ini ikut zon waktu pelayar (bukan UTC) dalam format YYYY-MM-DD.
+function tarikhTempatan(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+const isGuruDG = (g) => /^DG/i.test(String(g?.gred || "").trim());
+const isPlaceholder = (g) => /PLACEHOLDER/i.test(String(g?.jawatan_hakiki || ""));
+const isPengurusanTertinggi = (g) => /^(PENGETUA|TP\b)/i.test(String(g?.jawatan_hakiki || "").trim());
+// Peraturan kokurikulum: setiap guru wajib jadi penasihat satu Badan Beruniform (D5) dan
+// satu SAHAJA Sukan/Permainan (D3) atau Kelab/Persatuan (D4). Dikecualikan: Ketua Guru Asrama,
+// Ketua Jabatan dan Ketua Unit Peperiksaan (UPPM), serta pengurusan tertinggi.
+const JAWATAN_PENASIHAT = ["Guru Penasihat", "Ketua Guru Penasihat"];
+function dikecualikanKokurikulum(g) {
+  return isPengurusanTertinggi(g) || (g?.lantikan || []).some((l) =>
+    (l.kod === "C1" && l.jawatan === "Ketua Guru Asrama") ||
+    (l.kod === "B1" && l.jawatan === "Ketua Jabatan") ||
+    (l.kod === "B3" && l.jawatan === "Ketua"));
+}
 const topengKP = (kp) => (kp ? String(kp).replace(/\d(?=\d{4})/g, "*") : "-");
 const normNama = (n) => String(n || "").toUpperCase().replace(/\s+/g, " ").trim();
 const PENGURUSAN_MAP = new Map(Object.entries(PENGURUSAN_TERTINGGI || {}).map(([n, j]) => [normNama(n), j]));
@@ -144,7 +161,8 @@ async function muatSemua() {
     sb.from("tetapan").select("nilai").eq("kunci", "perkongsian_dibuka").maybeSingle(),
   ]);
   S.perkongsianDibuka = semak(kongsi)?.nilai === true;
-  S.guru = semak(g);
+  // Umur sentiasa dikira semula daripada No. K/P (umur tersimpan hanya sandaran jika tiada K/P).
+  S.guru = semak(g).map((x) => ({ ...x, umur: umurDariKP(x.no_kp) ?? x.umur }));
   S.jk = semak(jk).sort((a, b) => kodSort(a.kod, b.kod));
   S.jawatan = semak(jw);
   S.lantikan = semak(l);
@@ -530,7 +548,6 @@ function butiranLantikan(g) {
 
 function viewBeban() {
   const isi = $("#isi");
-  const isGuruDG = (g) => /^DG/i.test(String(g.gred || "").trim());
   const ikutKumpulan = S.guruLengkap.filter((g) =>
     !S.bebanKumpulan || (S.bebanKumpulan === "guru" ? isGuruDG(g) : !isGuruDG(g)));
   const senaraiGred = [...new Set(ikutKumpulan.map((g) => g.gred).filter(Boolean))]
@@ -760,7 +777,7 @@ function viewLantikan() {
           <button type="button" id="b-cadang" class="sekunder">Cadang guru</button>
           <button class="utama" type="submit">Lantik</button>
         </div>
-        <p class="nota" id="nota-cadang">Senarai guru disusun dari beban terendah. "Cadang guru" memilih guru dengan beban terendah yang belum dalam JK ini.</p>
+        <p class="nota" id="nota-cadang">Senarai guru disusun dari beban terendah. "Cadang guru" memilih guru DG dengan beban terendah yang belum dalam JK ini (tidak termasuk Pengetua/TP dan placeholder${jk.kategori === "A" ? "; kakitangan sokongan turut dipertimbang bagi JK pentadbiran" : ""}).</p>
       </form>
     </section>
   </div>`;
@@ -818,10 +835,19 @@ function viewLantikan() {
   iCariGuru.onkeydown = (e) => { if (e.key === "Enter") e.preventDefault(); };
   $("#b-cadang").onclick = () => {
     const jw = S.jwMap.get(Number(form.jawatan.value));
-    const tanpaTindan = S.guruLengkap.filter((g) => !idAhli.has(g.id) && !amaranTarikhJika(g, jk, jw).length);
-    const calon = (tanpaTindan.length ? tanpaTindan : S.guruLengkap.filter((g) => !idAhli.has(g.id)))
+    // Calon: guru DG sahaja (JK kategori A pentadbiran turut membenarkan kakitangan sokongan),
+    // tidak termasuk pengurusan tertinggi (Pengetua/TP) dan rekod placeholder.
+    const penasihatKoko = ["D3", "D4", "D5"].includes(jk.kod) && JAWATAN_PENASIHAT.includes(jw?.nama);
+    const lainKoko = { D3: "D4", D4: "D3" }[jk.kod];
+    const layak = S.guruLengkap.filter((g) => !idAhli.has(g.id) && !isPlaceholder(g) && !isPengurusanTertinggi(g) &&
+      (jk.kategori === "A" || isGuruDG(g)) &&
+      // Penasihat kokurikulum: langkau yang dikecualikan & yang sudah pegang Sukan/Kelab yang satu lagi
+      (!penasihatKoko || (!dikecualikanKokurikulum(g) &&
+        !(lainKoko && g.lantikan.some((l) => l.kod === lainKoko && JAWATAN_PENASIHAT.includes(l.jawatan))))));
+    const tanpaTindan = layak.filter((g) => !amaranTarikhJika(g, jk, jw).length);
+    const calon = (tanpaTindan.length ? tanpaTindan : layak)
       .map((g) => ({ nama: String(g.id), umur: g.umur, lantikan: g.lantikan }));
-    if (!calon.length) return toast("Semua guru sudah berada dalam JK ini.", "ralat");
+    if (!calon.length) return toast("Tiada guru layak untuk dicadangkan (semua guru DG sudah dalam JK ini).", "ralat");
     const slot = { jk: jk.nama, jawatan: jw.nama, tempoh: jk.tempoh, skala: jk.skala, fizikal: jk.fizikal };
     const hasil = agihSeimbang(calon, [slot], S.config, { kecualiPengurusan: S.kecualiPengurusan });
     if (!hasil.agihan.length) return toast("Tiada guru layak untuk dicadangkan.", "ralat");
@@ -870,7 +896,7 @@ function umurDariKP(kp) {
 function viewGuru() {
   const isi = $("#isi");
   const ed = S.guruEdit ? S.guru.find((g) => g.id === S.guruEdit) : null;
-  const bilLantikan = (id) => S.lantikan.filter((l) => l.guru_id === id).length;
+  const bilLantikan = (id) => S.lantikan.filter((l) => l.guru_id === id && S.jkMap.get(l.jk_id)?.aktif).length;
   const senaraiUnit = [...new Set(S.guru.map((g) => g.unit).filter(Boolean))].sort();
   const unik = (k) => [...new Set(S.guru.map((g) => g[k]).filter(Boolean))]
     .sort((a, b) => String(a).localeCompare(String(b), "ms", { numeric: true }));
@@ -942,7 +968,7 @@ function viewGuru() {
           </div>
           <datalist id="dl-unit">${senaraiUnit.map((u) => `<option value="${esc(u)}">`).join("")}</datalist>
           <div class="grid-2">
-            <label>No. Gaji (untuk semakan)<input name="no_gaji" required value="${esc(ed?.no_gaji)}"></label>
+            <label>No. Gaji (untuk semakan)<input name="no_gaji" value="${esc(ed?.no_gaji)}" placeholder="${isPlaceholder(ed) ? "kosong untuk placeholder" : ""}"></label>
             <label>No. K/P<input name="no_kp" value="${esc(ed?.no_kp)}" inputmode="numeric"></label>
           </div>
           <div class="grid-2">
@@ -1314,7 +1340,7 @@ function binaSurat(senaraiGuru, opsyen, config = S.config) {
     nama: MAKLUMAT_SEKOLAH.nama,
     negeri: MAKLUMAT_SEKOLAH.negeri,
     sesi: S.surat.sesi,
-    tarikh: S.surat.tarikh || new Date().toISOString().slice(0, 10),
+    tarikh: S.surat.tarikh || tarikhTempatan(),
     tarikhHijrah: (S.surat.tarikhHijrah || "").trim(),
     rujukan: S.surat.rujukan,
     salinan: S.surat.salinan,
@@ -1339,7 +1365,8 @@ function cetak(html) {
 
 function viewSurat() {
   const isi = $("#isi");
-  const ada = S.guruLengkap.filter((g) => g.lantikan.length);
+  // Rekod placeholder (cth MR. JSS, CIKGU FIZIK) tidak dicetak surat.
+  const ada = S.guruLengkap.filter((g) => g.lantikan.length && !isPlaceholder(g));
   const padanSurat = (teks) => {
     const c = (teks || "").trim().toLowerCase();
     return c ? ada.filter((g) => String(g.nama || "").toLowerCase().includes(c) || String(g.no_gaji || "").includes(c)) : ada;
